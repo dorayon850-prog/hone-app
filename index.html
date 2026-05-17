@@ -1214,7 +1214,7 @@ let selectedPlatforms = [];
 let apiResult = null;
 
 // == API KEYS ==
-// Keys stored server-side in Netlify environment variables
+// Keys stored server-side as Netlify environment variables
 function getFirecrawlKey()  { return ''; }
 function getAnthropicKey()  { return ''; }
 
@@ -1341,7 +1341,27 @@ function handleAnalyze() {
   runScan();
 }
 
-// == FIRECRAWL: MAP + SCRAPE PRIORITIZED PAGES ==
+// == ANALYZE VIA NETLIFY PROXY ==
+async function analyzeWithClaude(data) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 55000);
+  try {
+    const res = await fetch('/.netlify/functions/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysisData: data }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'Analysis failed — status ' + res.status);
+    return json.result;
+  } catch(err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') throw new Error('Analysis timed out — please try again.');
+    throw err;
+  }
+}
 
 // == SCAN SEQUENCE ==
 function runScan() {
