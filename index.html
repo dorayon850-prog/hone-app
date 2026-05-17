@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hone - Be the Answer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+/* -- TOKENS -- */
+:root {
+  --bg:          #06050F;
+  --surface:     #0D0B1C;
+  --card:        #131028;
+  --border:      #1E1A30;
+  --border-hi:   #2D2848;
+  --gold:        #C8922A;
+  --gold-light:  #E4A83C;
+  --gold-dim:    rgba(200,146,42,0.12);
+  --gold-glow:   rgba(200,146,42,0.07);
+  --blue:        #4A8EC4;
+  --blue-light:  #6AA8DB;
+  --blue-dim:    rgba(74,142,196,0.12);
+  --blue-glow:   rgba(74,142,196,0.07);
+  --purple:      #7B5BB8;
+  --purple-light:#9470D4;
+  --purple-dim:  rgba(123,91,184,0.12);
+  --text:        #EEEDF8;
+  --text-sec:    #7A7890;
+  --text-muted:  #3A3850;
+  --green:       #4A9B6F;
+  --green-dim:   rgba(74,155,111,0.12);
+  --amber:       #C4842A;
+  --amber-dim:   rgba(196,132,42,0.12);
+  --red:         #B85450;
+  --red-dim:     rgba(184,84,80,0.12);
+  --radius:      6px;
+  --radius-lg:   10px;
+  --radius-xl:   16px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:16px; scroll-behavior:smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-weight: 400;
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* -- NOISE TEXTURE -- */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.25;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: -30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(123,91,184,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* -- SCREENS -- */
+.screen { display: none; position: relative; z-index: 1; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ══════════════════════════════════════
+   SCREEN 1 - ENTRY
+══════════════════════════════════════ */
+#screen-entry {
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.entry-inner {
+  width: 100%;
+  max-width: 480px;
+  animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* Wordmark */
+.wordmark {
+  font-family: 'DM Serif Display', serif;
+  font-style: italic;
+  font-size: 3.5rem;
+  letter-spacing: -0.03em;
+  color: var(--gold-light);
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+.tagline {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 3.5rem;
+}
+
+/* Form */
+.entry-form { display: flex; flex-direction: column; gap: 0; }
+
+.field-block { margin-bottom: 1.5rem; }
+
+.field-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-sec);
+  margin-bottom: 0.5rem;
+}
+
+select, input[type="text"], textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  padding: 0.8rem 1rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+select:focus, input[type="text"]:focus, textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%237A7975' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+select option { background: var(--surface); }
+input::placeholder, textarea::placeholder { color: var(--text-muted); }
+
+/* Path toggle */
+.path-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.path-btn {
+  padding: 0.75rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-sec);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s;
+}
+
+.path-btn:hover { border-color: var(--border-hi); color: var(--text); }
+
+.path-btn.active {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+  color: var(--gold-light);
+}
+
+/* Path B multi-select */
+.platform-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.platform-chip {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: var(--surface);
+  color: var(--text-sec);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  user-select: none;
+}
+
+.platform-chip:hover { border-color: var(--border-hi); color: var(--text); }
+.platform-chip.active { border-color: var(--purple); background: var(--purple-dim); color: var(--purple-light); }
+
+/* Analyze button */
+.btn-analyze {
+  width: 100%;
+  padding: 1rem;
+  background: var(--gold);
+  border: none;
+  border-radius: var(--radius);
+  color: #080808;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.18s;
+  margin-top: 0.5rem;
+}
+
+.btn-analyze:hover { background: var(--gold-light); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(201,150,58,0.2); }
+.btn-analyze:active { transform: translateY(0); }
+
+/* ══════════════════════════════════════
+   SCREEN 2 - SCAN
+══════════════════════════════════════ */
+#screen-scan {
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.scan-wordmark {
+  font-family: 'DM Serif Display', serif;
+  font-style: italic;
+  font-size: 2.5rem;
+  color: var(--gold-light);
+  letter-spacing: -0.02em;
+}
+
+.scan-inner { width: 100%; max-width: 400px; }
+
+.scan-track {
+  height: 1px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.scan-fill {
+  height: 1px;
+  background: linear-gradient(90deg, var(--purple), var(--blue));
+  width: 0%;
+  border-radius: 1px;
+  transition: width 0.4s ease;
+}
+
+.scan-log {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-sec);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 120px;
+}
+
+.log-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.3s ease;
+}
+
+.log-line.visible { opacity: 1; transform: translateY(0); }
+.log-line.done { color: var(--green); }
+.log-line.active { color: var(--gold-light); }
+
+.log-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.log-dot.pulse { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ══════════════════════════════════════
+   SCREEN 3 - RESULTS
+══════════════════════════════════════ */
+#screen-results { min-height: 100vh; }
+
+/* Results header */
+
+
+
+
+
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-sec);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.04em;
+}
+
+.btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
+
+/* Score banner */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Main tabs */
+
+
+
+
+
+
+
+/* Tab panels */
+
+
+
+/* What AI Sees tab */
+
+
+.ai-view-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--purple), var(--blue), transparent);
+}
+
+
+
+
+
+/* Gaps tab */
+
+
+
+
+
+
+
+
+.impact-bar.high   { background: var(--red);   height: 48px; }
+.impact-bar.medium { background: var(--amber);  height: 32px; }
+.impact-bar.low    { background: var(--green);  height: 16px; }
+
+
+
+.impact-label.high   { color: var(--red); }
+.impact-label.medium { color: var(--amber); }
+.impact-label.low    { color: var(--green); }
+
+
+
+
+
+
+
+
+
+/* Content tab */
+
+
+
+
+
+
+
+
+
+
+
+
+/* FAQ items */
+
+
+
+
+
+
+/* Schema block */
+
+
+
+
+
+
+
+
+
+
+
+/* Action Plan tab */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Product Mode overlay */
+.product-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(6,5,15,0.94);
+  backdrop-filter: blur(16px);
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.product-overlay.open { display: flex; }
+
+.product-modal {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  animation: modalIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+@keyframes modalIn {
+  from { opacity:0; transform:scale(0.96) translateY(12px); }
+  to   { opacity:1; transform:scale(1) translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-sec);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 0.18s;
+}
+
+.modal-close:hover { color: var(--text); }
+
+.modal-body { padding: 1.5rem; }
+
+.modal-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin: 0 -1.5rem 1.5rem;
+  padding: 0 1.5rem;
+}
+
+.modal-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-sec);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.75rem 0.875rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  margin-bottom: -1px;
+}
+
+.modal-tab:hover { color: var(--text); }
+.modal-tab.active { color: var(--blue-light); border-bottom-color: var(--blue); }
+
+.modal-panel { display: none; }
+.modal-panel.active { display: block; }
+
+/* Results footer */
+.results-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.btn-product {
+  flex: 1;
+  padding: 0.8rem;
+  background: var(--gold);
+  border: none;
+  border-radius: var(--radius);
+  color: #080808;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.btn-product:hover { background: var(--gold-light); }
+
+/* == RESULTS HEADER == */
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(6,5,15,0.97);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+}
+
+.results-wordmark {
+  font-family: 'DM Serif Display', serif;
+  font-style: italic;
+  font-size: 1.6rem;
+  color: var(--gold-light);
+  letter-spacing: -0.02em;
+}
+
+.results-business {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-sec);
+  margin-top: 0.15rem;
+  font-family: 'DM Mono', monospace;
+}
+
+/* == STATUS BANNER == */
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--purple-dim) 0%, transparent 100%);
+}
+
+.status-indicator {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.status-indicator::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%,100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.4); opacity: 0.1; }
+}
+
+.status-indicator.not-found { background: var(--red); }
+.status-indicator.not-found::after { background: var(--red); }
+.status-indicator.partial { background: var(--amber); }
+.status-indicator.partial::after { background: var(--amber); }
+.status-indicator.ready { background: var(--green); }
+.status-indicator.ready::after { background: var(--green); }
+
+.status-text { flex: 1; }
+
+.status-state {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.2rem;
+  color: var(--text);
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+}
+
+.status-sub {
+  font-size: 0.78rem;
+  color: var(--text-sec);
+  line-height: 1.5;
+}
+
+.status-progress-wrap {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.status-progress-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.status-progress-track {
+  width: 120px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-left: auto;
+}
+
+.status-progress-fill {
+  height: 2px;
+  background: linear-gradient(90deg, var(--purple), var(--blue));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+/* == FIX QUEUE == */
+.fix-queue {
+  padding: 2rem;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fix-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.fix-card:hover { border-color: var(--border-hi); }
+.fix-card.applied { border-color: var(--green); opacity: 0.7; }
+
+.fix-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 0;
+}
+
+.fix-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-hi);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-sec);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.fix-number.high-impact { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+.fix-number.medium-impact { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.fix-number.low-impact { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+.fix-number.done { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+.fix-problem {
+  flex: 1;
+}
+
+.fix-problem-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+  line-height: 1.4;
+}
+
+.fix-problem-why {
+  font-size: 0.78rem;
+  color: var(--text-sec);
+  line-height: 1.55;
+}
+
+.fix-apply-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fix-apply-btn:hover { border-color: var(--green); color: var(--green); }
+.fix-apply-btn.applied { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+.fix-card-body {
+  padding: 1rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Fix deliverable block */
+.fix-deliverable {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.fix-deliverable-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+
+.fix-deliverable-type {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+  font-family: 'DM Mono', monospace;
+}
+
+.fix-copy-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.fix-copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+.fix-copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+.fix-deliverable-content {
+  padding: 0.875rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.fix-deliverable-content.is-code {
+  color: var(--blue-light);
+  background: #0D1117;
+  font-size: 0.72rem;
+}
+
+/* Where it goes */
+.fix-where {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.875rem;
+  background: var(--gold-dim);
+  border: 1px solid rgba(200,146,42,0.15);
+  border-radius: var(--radius);
+}
+
+.fix-where-arrow {
+  color: var(--gold);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+  font-family: 'DM Mono', monospace;
+}
+
+.fix-where-text {
+  font-size: 0.78rem;
+  color: var(--gold-light);
+  line-height: 1.55;
+}
+
+/* AI Prompt block */
+.fix-prompt {
+  background: var(--purple-dim);
+  border: 1px solid rgba(123,91,184,0.2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.fix-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.875rem;
+  border-bottom: 1px solid rgba(123,91,184,0.2);
+}
+
+.fix-prompt-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--purple-light);
+  font-family: 'DM Mono', monospace;
+}
+
+.fix-prompt-content {
+  padding: 0.875rem;
+  font-size: 0.78rem;
+  color: var(--text-sec);
+  line-height: 1.65;
+  font-style: italic;
+}
+
+/* Done state */
+.fix-done-bar {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-top: 1px solid var(--green-dim);
+  background: var(--green-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--green);
+}
+
+.fix-card.applied .fix-done-bar { display: flex; }
+
+/* Completion screen */
+.completion-screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  gap: 1.5rem;
+}
+
+.completion-screen.visible { display: flex; }
+
+.completion-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--green-dim);
+  border: 1px solid var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.completion-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2rem;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.completion-sub {
+  font-size: 0.88rem;
+  color: var(--text-sec);
+  max-width: 360px;
+  line-height: 1.65;
+}
+
+/* == UTILITY == */
+
+.hidden { display: none !important; }
+.field-error { color: var(--red); font-size: 0.72rem; margin-top: 0.35rem; font-family: 'DM Mono', monospace; }
+.input-err { border-color: var(--red) !important; }
+
+
+</style>
+</head>
+<body>
+
+
+<div id="screen-entry" class="screen active">
+  <div class="entry-inner">
+
+    <div class="wordmark">Hone</div>
+    <p class="tagline">Be the answer</p>
+
+    <div class="entry-form">
+
+      <!-- Industry -->
+      <div class="field-block">
+        <label class="field-label">Industry</label>
+        <select id="industry">
+          <option value="">Select your industry</option>
+          <option>Retail & E-Commerce</option>
+          <option>Food & Beverage</option>
+          <option>Health & Wellness</option>
+          <option>Beauty & Personal Care</option>
+          <option>Fitness & Sports</option>
+          <option>Legal & Professional Services</option>
+          <option>Finance & Accounting</option>
+          <option>Real Estate</option>
+          <option>Home Services & Trades</option>
+          <option>Education & Coaching</option>
+          <option>Creative & Design</option>
+          <option>Photography & Video</option>
+          <option>Technology & Software</option>
+          <option>Marketing & Advertising</option>
+          <option>Travel & Hospitality</option>
+          <option>Non-Profit & Community</option>
+          <option>Arts & Entertainment</option>
+          <option>Automotive</option>
+          <option>Fashion & Apparel</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <!-- Firecrawl key - Path A only -->
+      <!-- Path toggle -->
+      <div class="field-block">
+        <label class="field-label">Website</label>
+        <div class="path-toggle">
+          <button type="button" class="path-btn active" data-path="A">I have a website</button>
+          <button type="button" class="path-btn" data-path="B">I don't have a website</button>
+        </div>
+      </div>
+
+      <!-- Path A -->
+      <div id="path-a" class="field-block">
+        <label class="field-label">Website URL</label>
+        <input type="text" id="url-input" placeholder="https://yourbusiness.com">
+      </div>
+
+      <!-- Path B -->
+      <div id="path-b" class="hidden">
+
+        <div class="field-block">
+          <label class="field-label">Business Name</label>
+          <input type="text" id="biz-name" placeholder="Your business name">
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">City & State</label>
+          <input type="text" id="biz-location" placeholder="Houston, TX">
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">What You Do</label>
+          <textarea id="biz-desc" placeholder="Describe what your business does and who it serves..." rows="3" style="resize:vertical;"></textarea>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">Where You Currently Exist</label>
+          <div class="platform-grid">
+            <span class="platform-chip" data-platform="Google Business Profile">Google Business Profile</span>
+            <span class="platform-chip" data-platform="Yelp">Yelp</span>
+            <span class="platform-chip" data-platform="Facebook">Facebook</span>
+            <span class="platform-chip" data-platform="Instagram">Instagram</span>
+            <span class="platform-chip" data-platform="TikTok">TikTok</span>
+            <span class="platform-chip" data-platform="Etsy">Etsy</span>
+            <span class="platform-chip" data-platform="Amazon">Amazon</span>
+            <span class="platform-chip" data-platform="Other">Other</span>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">Current Bio or Description <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+          <textarea id="biz-bio" placeholder="Paste your current Google Business Profile description, social bio, or any existing copy..." rows="3" style="resize:vertical;"></textarea>
+        </div>
+
+      </div>
+
+      <button type="button" class="btn-analyze" onclick="handleAnalyze()">Analyze -></button>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════
+     SCREEN 2 - SCAN
+════════════════════════════════════ -->
+<div id="screen-scan" class="screen">
+  <div class="scan-wordmark">Hone</div>
+  <div class="scan-inner">
+    <div class="scan-track">
+      <div class="scan-fill" id="scan-fill"></div>
+    </div>
+    <div class="scan-log" id="scan-log"></div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════
+     SCREEN 3 - RESULTS
+════════════════════════════════════ -->
+<div id="screen-results" class="screen">
+
+  <!-- Results Header -->
+  <div class="results-header">
+    <div>
+      <div class="results-wordmark">Hone</div>
+      <div class="results-business" id="results-business-label"></div>
+    </div>
+    <button class="btn-ghost" onclick="resetTool()">New Analysis</button>
+  </div>
+
+  <!-- Status Banner -->
+  <div class="status-banner" id="status-banner">
+    <div class="status-indicator" id="status-indicator"></div>
+    <div class="status-text">
+      <div class="status-state" id="status-state"></div>
+      <div class="status-sub" id="status-sub"></div>
+    </div>
+    <div class="status-progress-wrap">
+      <div class="status-progress-label"><span id="fixes-done">0</span> of <span id="fixes-total">0</span> fixes applied</div>
+      <div class="status-progress-track">
+        <div class="status-progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fix Queue -->
+  <div class="fix-queue" id="fix-queue"></div>
+
+  <!-- Product Mode Trigger -->
+  <div class="results-footer">
+    <button class="btn-ghost" style="flex:1;" onclick="resetTool()">New Analysis</button>
+    <button class="btn-product" onclick="openProductMode()">Analyze a Product or Service</button>
+  </div>
+
+</div>
+
+<div class="product-overlay" id="product-overlay">
+  <div class="product-modal">
+
+    <div class="modal-header">
+      <span class="modal-title">Product Mode</span>
+      <button class="modal-close" onclick="closeProductMode()">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Pre-fill notice - shown when data came from analysis -->
+      <div id="prefill-notice" class="hidden" style="background:var(--blue-dim);border:1px solid rgba(74,142,196,0.2);border-radius:var(--radius);padding:0.65rem 1rem;margin-bottom:1.25rem;font-size:0.75rem;color:var(--blue-light);font-family:'DM Mono',monospace;">
+        ↳ Pre-filled from your business analysis - review and refine before analyzing
+      </div>
+
+      <!-- Inputs shown first -->
+      <div id="product-inputs">
+        <div class="field-block">
+          <label class="field-label">Product or Service Name</label>
+          <input type="text" id="prod-name" placeholder="What are you selling?">
+        </div>
+        <div class="field-block">
+          <label class="field-label">What It Does</label>
+          <textarea id="prod-desc" placeholder="What does it do and what problem does it solve?" rows="2" style="resize:vertical;"></textarea>
+        </div>
+        <div class="field-block">
+          <label class="field-label">Who It's For</label>
+          <input type="text" id="prod-customer" placeholder="Your ideal customer">
+        </div>
+        <div class="field-block">
+          <label class="field-label">Price Point</label>
+          <input type="text" id="prod-price" placeholder="$29.99 / $49/mo / Free + paid tier">
+        </div>
+        <div class="field-block">
+          <label class="field-label">What Makes It Different</label>
+          <input type="text" id="prod-diff" placeholder="The one thing competitors can't say">
+        </div>
+        <button type="button" class="btn-analyze" onclick="handleProductAnalyze()" style="margin-top:0.5rem;">Analyze Product -></button>
+      </div>
+
+      <!-- Results shown after analysis -->
+      <div id="product-results" class="hidden">
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-modal-tab="ai-desc">AI Description</button>
+          <button class="modal-tab" data-modal-tab="queries">Query Match</button>
+          <button class="modal-tab" data-modal-tab="prod-schema">Schema</button>
+        </div>
+
+        <div class="modal-panel active" id="modal-tab-ai-desc">
+          <div class="content-block">
+            <div class="content-block-label">AI-Ready Product Description</div>
+            <div class="content-block-text" id="out-prod-desc"></div>
+            <button class="copy-btn" data-target="out-prod-desc">Copy</button>
+          </div>
+        </div>
+
+        <div class="modal-panel" id="modal-tab-queries">
+          <div id="out-prod-queries"></div>
+        </div>
+
+        <div class="modal-panel" id="modal-tab-prod-schema">
+          <div class="schema-block">
+            <div class="schema-label">Product Schema - Paste in &lt;head&gt;</div>
+            <div class="schema-text" id="out-prod-schema"></div>
+            <button class="copy-btn" data-target="out-prod-schema">Copy</button>
+          </div>
+          <div class="placement-note" style="margin-top:0.75rem;">
+            <span class="placement-note-icon">-></span>
+            <span class="placement-note-text">Add this to the &lt;head&gt; of your product page. In Shopify add it to your product template liquid file.</span>
+          </div>
+        </div>
+
+        <button class="btn-ghost" style="width:100%;margin-top:1.25rem;" onclick="resetProductMode()">← Analyze Another Product</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+const $ = id => document.getElementById(id);
+let currentPath = 'A';
+let analysisData = {};
+let selectedPlatforms = [];
+let apiResult = null;
+
+// == API KEYS ==
+// Keys stored server-side in Netlify environment variables
+function getFirecrawlKey()  { return ''; }
+function getAnthropicKey()  { return ''; }
+
+function setGearConfiguredIndicator() {
+  // Anthropic key auto-handled in Claude.ai
+}
+
+
+
+// == SCREEN MANAGEMENT ==
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+
+}
+
+// == PATH TOGGLE ==
+document.querySelectorAll('.path-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.path-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPath = btn.dataset.path;
+    $('path-a').classList.toggle('hidden', currentPath !== 'A');
+    $('path-b').classList.toggle('hidden', currentPath !== 'B');
+  });
+});
+
+// == PLATFORM CHIPS ==
+document.querySelectorAll('.platform-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.classList.toggle('active');
+    const p = chip.dataset.platform;
+    if (chip.classList.contains('active')) selectedPlatforms.push(p);
+    else selectedPlatforms = selectedPlatforms.filter(x => x !== p);
+  });
+});
+
+// == MAIN TABS ==
+document.querySelectorAll('.main-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// == MODAL TABS ==
+document.querySelectorAll('.modal-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.modal-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $('modal-tab-' + btn.dataset.modalTab).classList.add('active');
+  });
+});
+
+// == COPY BUTTONS ==
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.copy-btn[data-target]');
+  if (!btn) return;
+  const el = $(btn.dataset.target);
+  if (!el) return;
+  copyText(el.textContent, btn);
+});
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'OK Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// == VALIDATION ==
+function validate(fields) {
+  document.querySelectorAll('.field-error').forEach(el => el.remove());
+  document.querySelectorAll('.input-err').forEach(el => el.classList.remove('input-err'));
+  let valid = true;
+  fields.forEach(({ id, msg }) => {
+    const el = $(id);
+    if (!el || !el.value.trim()) {
+      valid = false;
+      el.classList.add('input-err');
+      const p = document.createElement('p');
+      p.className = 'field-error';
+      p.textContent = msg;
+      el.parentNode.insertBefore(p, el.nextSibling);
+    }
+  });
+  return valid;
+}
+
+// == ANALYZE ==
+function handleAnalyze() {
+  const industry = $('industry').value;
+  if (!industry) { $('industry').classList.add('input-err'); return; }
+
+  if (currentPath === 'A') {
+    if (!validate([{ id:'url-input', msg:'Please enter your website URL.' }])) return;
+
+    let url = $('url-input').value.trim();
+    if (!url.startsWith('http')) url = 'https://' + url;
+    analysisData = { path:'A', industry, url };
+  } else {
+    if (!validate([
+      { id:'biz-name',     msg:'Please enter your business name.' },
+      { id:'biz-location', msg:'Please enter your city and state.' },
+      { id:'biz-desc',     msg:'Please describe what your business does.' },
+    ])) return;
+    analysisData = {
+      path:'B', industry,
+      bizName:    $('biz-name').value.trim(),
+      location:   $('biz-location').value.trim(),
+      bizDesc:    $('biz-desc').value.trim(),
+      platforms:  [...selectedPlatforms],
+      currentBio: $('biz-bio').value.trim(),
+    };
+  }
+
+  showScreen('screen-scan');
+  runScan();
+}
+
+// == FIRECRAWL: MAP + SCRAPE PRIORITIZED PAGES ==
+
+// == SCAN SEQUENCE ==
+function runScan() {
+  const logEl = $('scan-log');
+  const fill  = $('scan-fill');
+  logEl.innerHTML = '';
+  apiResult = null;
+
+  const linesA = [
+    'Connecting to your website...',
+    'Mapping your site structure...',
+    'Reading your key pages...',
+    'Analyzing GEO signals...',
+    'Evaluating entity clarity...',
+    'Building your visibility report...',
+  ];
+
+  const linesB = [
+    'Reading your business details...',
+    'Identifying your current presence...',
+    'Mapping your GEO gaps...',
+    'Generating your content package...',
+    'Building your action plan...',
+  ];
+
+  const lines = analysisData.path === 'A' ? linesA : linesB;
+  const stepPct = 100 / lines.length;
+
+  lines.forEach(text => {
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    div.innerHTML = '<span class="log-dot"></span><span>' + text + '</span>';
+    logEl.appendChild(div);
+  });
+
+  const els = logEl.querySelectorAll('.log-line');
+  let i = 0;
+  let apiDone = false;
+  let animReady = false;
+
+  // Start API call immediately
+  analyzeWithClaude(analysisData).then(result => {
+    apiResult = result;
+    apiDone = true;
+    if (animReady) finishScan();
+  }).catch(err => {
+    console.error('Analysis error:', err);
+    analysisData.lastError = err.message || String(err);
+    apiResult = null;
+    apiDone = true;
+    if (animReady) finishScan();
+  });
+
+  function advance() {
+    if (i > 0) {
+      els[i-1].classList.remove('active');
+      els[i-1].classList.add('done');
+      els[i-1].querySelector('.log-dot').classList.remove('pulse');
+    }
+    if (i < els.length - 1) {
+      els[i].classList.add('visible','active');
+      els[i].querySelector('.log-dot').classList.add('pulse');
+      fill.style.width = ((i+1) * stepPct) + '%';
+      i++;
+      setTimeout(advance, analysisData.path === 'A' ? 4000 : 1000);
+    } else {
+      // Last line - hold until API returns
+      els[i].classList.add('visible','active');
+      els[i].querySelector('.log-dot').classList.add('pulse');
+      fill.style.width = '95%';
+      i++;
+      animReady = true;
+      if (apiDone) finishScan();
+    }
+  }
+
+  advance();
+}
+
+function finishScan() {
+  $('scan-fill').style.width = '100%';
+  setTimeout(() => {
+    populateResults();
+    showScreen('screen-results');
+    animateScore();
+  }, 400);
+}
+
+// == SCORE ANIMATION ==
+function animateScore() {
+  const score = analysisData.computedScore || 0;
+  const arc = $('score-arc');
+  const num = $('score-number');
+  const circumference = 251;
+  const offset = circumference - (score / 100) * circumference;
+
+  setTimeout(() => {
+    arc.style.strokeDashoffset = offset;
+    arc.style.stroke = score >= 70 ? 'var(--blue-light)' : score >= 40 ? 'var(--purple-light)' : 'var(--red)';
+    let current = 0;
+    const inc = Math.max(score / 40, 0.5);
+    const iv = setInterval(() => {
+      current = Math.min(current + inc, score);
+      num.textContent = Math.round(current);
+      if (current >= score) clearInterval(iv);
+    }, 25);
+  }, 200);
+}
+
+// == POPULATE RESULTS ==
+let fixesDone = 0;
+let fixesTotal = 0;
+
+function populateResults() {
+  const d = analysisData;
+  const r = apiResult;
+  const name = d.path === 'A'
+    ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0]
+    : d.bizName;
+
+  const pgInfo = d.pageCount ? ' - ' + d.pageCount + ' pages read' : '';
+  $('results-business-label').textContent = name + ' - ' + d.industry + pgInfo;
+
+  // Set status
+  const score = r ? (r.score || 20) : 0;
+  d.computedScore = score;
+
+  let statusClass, statusState, statusSub;
+  if (score >= 70) {
+    statusClass = 'ready';
+    statusState = 'Recommendation Ready';
+    statusSub = 'AI systems can find and recommend you. Apply these fixes to stay ahead.';
+  } else if (score >= 35) {
+    statusClass = 'partial';
+    statusState = 'Partially Visible';
+    statusSub = "AI systems have found you but won't confidently recommend you yet.";
+  } else {
+    statusClass = 'not-found';
+    statusState = 'Not Found';
+    statusSub = 'AI systems cannot recommend you yet. Apply the fixes below to change that.';
+  }
+
+  const indicator = $('status-indicator');
+  indicator.className = 'status-indicator ' + statusClass;
+  $('status-state').textContent = statusState;
+  $('status-sub').textContent = statusSub;
+
+  if (!r) {
+    const errMsg = analysisData.lastError || 'Unknown error';
+    $('fix-queue').innerHTML = `
+      <div style="padding:2rem;max-width:600px;">
+        <div style="background:var(--red-dim);border:1px solid var(--red);border-radius:8px;padding:1.25rem;margin-bottom:1rem;">
+          <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);font-family:'DM Mono',monospace;margin-bottom:0.5rem;">Analysis Failed</div>
+          <div style="font-size:0.82rem;color:var(--text);font-family:'DM Mono',monospace;word-break:break-all;">${esc(errMsg)}</div>
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-sec);line-height:1.7;">
+          If you see a CORS or fetch error, the file needs to be served over HTTP rather than opened directly.<br><br>
+          In Terminal, navigate to this file's folder and run:<br>
+          <span style="font-family:'DM Mono',monospace;color:var(--blue);font-size:0.82rem;">python3 -m http.server 8080</span><br><br>
+          Then open: <span style="font-family:'DM Mono',monospace;color:var(--blue);font-size:0.82rem;">http://localhost:8080/hone-final.html</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // Build fix cards from real data
+  const fixes = buildFixes(d, r);
+  fixesTotal = fixes.length;
+  fixesDone = 0;
+  $('fixes-total').textContent = fixesTotal;
+  $('fixes-done').textContent = 0;
+  $('progress-fill').style.width = '0%';
+
+  $('fix-queue').innerHTML = fixes.map((fix, i) => buildFixCard(fix, i)).join('');
+
+  // Store for product mode prefill
+  if (d.path === 'A') {
+    d.detectedProduct     = r.detectedProduct     || '';
+    d.detectedProductDesc = r.detectedProductDesc || '';
+    d.detectedCustomer    = r.detectedCustomer    || '';
+    d.detectedPrice       = r.detectedPrice       || '';
+  }
+}
+
+function buildFixes(d, r) {
+  const fixes = [];
+  const isA = d.path === 'A';
+  const name = isA
+    ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0]
+    : d.bizName;
+
+  if (isA) {
+    // Fix 1: Entity Statement
+    if (r.entity) {
+      fixes.push({
+        impact: 'high',
+        title: 'AI systems cannot clearly identify what you are',
+        why: 'Without a clear entity definition, AI systems skip you when they cannot confidently match you to a search.',
+        deliverableType: 'Entity Statement',
+        deliverable: r.entity,
+        isCode: false,
+        where: 'Paste this as the first paragraph of your About page and your Google Business Profile description.',
+        prompt: 'I need to add the following text as the opening paragraph of my About page. Here is the text: "' + r.entity.slice(0, 120) + '..." Please add it naturally to my existing About page content without removing anything important.'
+      });
+    }
+
+    // Fix 2: Business Description
+    if (r.bizDesc) {
+      fixes.push({
+        impact: 'high',
+        title: 'Your business description is not written for AI systems',
+        why: 'AI systems read your homepage copy to decide whether to recommend you. Generic descriptions get skipped.',
+        deliverableType: 'AI-Ready Description',
+        deliverable: r.bizDesc,
+        isCode: false,
+        where: 'Replace your current homepage intro or hero description with this text.',
+        prompt: 'Replace my current homepage hero text with the following description. Keep my existing headline but replace the body text beneath it: "' + r.bizDesc.slice(0, 100) + '..."'
+      });
+    }
+
+    // Fix 3: FAQ Schema
+    if (r.faqs && r.faqs.length) {
+      const schemaObj = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": r.faqs.map(f => ({
+          "@type": "Question",
+          "name": f.q,
+          "acceptedAnswer": { "@type": "Answer", "text": f.a }
+        }))
+      };
+      const schemaCode = '<script type="application/ld+json">\n' + JSON.stringify(schemaObj, null, 2) + '\n<\/script>';
+      const placement = r.schemaNote || 'Add this to the <head> section of your homepage.';
+      fixes.push({
+        impact: 'high',
+        title: 'No FAQ schema found - AI systems are missing your Q&A content',
+        why: 'FAQ schema is one of the highest-impact GEO signals. AI systems pull directly from it when answering questions about businesses like yours.',
+        deliverableType: 'FAQ Schema Code',
+        deliverable: schemaCode,
+        isCode: true,
+        where: placement,
+        prompt: 'Add the following FAQ schema code to the <head> section of my homepage. ' + placement + ' Here is the code to add: [paste the schema code above]. Give me step-by-step instructions for my platform.'
+      });
+
+      // Fix 4: FAQ Content
+      const faqText = r.faqs.map(f => 'Q: ' + f.q + '\nA: ' + f.a).join('\n\n');
+      fixes.push({
+        impact: 'medium',
+        title: 'Missing FAQ section on your website',
+        why: 'AI systems match user questions to FAQ content on your site. Without it, a competitor with FAQs gets recommended instead.',
+        deliverableType: 'FAQ Content',
+        deliverable: faqText,
+        isCode: false,
+        where: 'Add a FAQ section to your homepage or a dedicated FAQ page using these question and answer pairs.',
+        prompt: 'Create a clean FAQ section using the following questions and answers and add it near the bottom of my homepage before the footer: [paste FAQ content above].'
+      });
+    }
+
+    // Fix 5: Positioning statements
+    if (r.positioning && r.positioning.length) {
+      fixes.push({
+        impact: 'medium',
+        title: 'Your positioning language is not specific enough for AI recommendations',
+        why: 'AI systems match businesses to specific queries. Vague positioning means you appear in fewer searches.',
+        deliverableType: 'Positioning Statements',
+        deliverable: r.positioning.join('\n\n'),
+        isCode: false,
+        where: 'Use these across your homepage, product pages, and Google Business Profile. Each one targets a specific AI query.',
+        prompt: 'Add these positioning statements to my website. Statement 1 goes in the hero area. Statement 2 goes on the About page. Statement 3 goes in the footer tagline area: [paste statements above].'
+      });
+    }
+
+    // Fix 6: llms.txt
+    fixes.push({
+      impact: 'low',
+      title: 'No llms.txt file - AI crawlers lack a clear reading guide',
+      why: 'A simple text file that tells AI systems exactly what to read on your site. Takes 10 minutes to create.',
+      deliverableType: 'llms.txt Content',
+      deliverable: '# ' + name + '\n\n> ' + (r.entity ? r.entity.slice(0, 200) : 'AI-powered business visibility tool.') + '\n\n## Key Pages\n\n- Homepage: ' + (d.url || '') + '\n- About: ' + (d.url || '') + '/about\n- Products: ' + (d.url || '') + '/products\n\n## What We Offer\n\n' + (r.bizDesc ? r.bizDesc.slice(0, 300) : ''),
+      isCode: false,
+      where: 'Create a file called llms.txt at the root of your website. Access it at yourdomain.com/llms.txt.',
+      prompt: 'I need to create a file called llms.txt and host it at the root of my website so it is accessible at ' + (d.url || 'mydomain.com') + '/llms.txt. Here is the content for the file: [paste llms.txt content above]. How do I create and host this file on my platform?'
+    });
+
+  } else {
+    // Path B fixes
+    if (r.gbpDesc) {
+      fixes.push({
+        impact: 'high',
+        title: 'Your Google Business Profile description is not written for AI systems',
+        why: 'Google Business Profile is the most important GEO signal for businesses without a website. AI systems read it to form recommendations.',
+        deliverableType: 'Google Business Profile Description',
+        deliverable: r.gbpDesc,
+        isCode: false,
+        where: 'Go to Google Business Profile, click Edit Profile, then Business Information, then Description. Paste this text.',
+        prompt: 'I need to update my Google Business Profile description. Please review this description and confirm it is under 750 characters and optimized for AI recommendations: [paste description above].'
+      });
+    }
+
+    if (r.gbpFaqs && r.gbpFaqs.length) {
+      const faqText = r.gbpFaqs.map(f => 'Q: ' + f.q + '\nA: ' + f.a).join('\n\n');
+      fixes.push({
+        impact: 'high',
+        title: 'No Q&A content on your Google Business Profile',
+        why: 'AI systems pull from the Q&A section of Google Business Profiles when answering local search queries. Empty Q&A means missed recommendations.',
+        deliverableType: 'Google Business Profile Q&A',
+        deliverable: faqText,
+        isCode: false,
+        where: 'Go to your Google Business Profile. In the Q&A section, click Ask a Question and post each question yourself. Then answer each one using the answers provided.',
+        prompt: 'I need to add Q&A to my Google Business Profile. I will post the questions myself and answer them. Please format these as clear, professional answers under 1000 characters each: [paste Q&A above].'
+      });
+    }
+
+    if (r.directory) {
+      fixes.push({
+        impact: 'medium',
+        title: 'Your directory listings are inconsistent or missing',
+        why: 'Consistent business information across directories is a key credibility signal AI systems use to verify and recommend businesses.',
+        deliverableType: 'Directory Listing Description',
+        deliverable: r.directory,
+        isCode: false,
+        where: 'Use this exact description on Yelp, Apple Maps, Bing Places, and any other directory you are listed on.',
+        prompt: 'I need to update my directory listings with consistent information. Here is the description to use everywhere: [paste description above]. What directories should I prioritize for a ' + d.industry + ' business?'
+      });
+    }
+
+    // One-page website package
+    if (r.pageHeadline) {
+      const pageContent = 'HEADLINE:\n' + r.pageHeadline + '\n\nDESCRIPTION:\n' + (r.pageDesc || '') + '\n\nSERVICES:\n' + (r.pageServices || '') + '\n\nFAQ:\n' + (r.pageFaqs || []).map(f => 'Q: ' + f.q + '\nA: ' + f.a).join('\n\n');
+      fixes.push({
+        impact: 'high',
+        title: 'No website means AI systems cannot fully recommend you',
+        why: 'A single public page dramatically improves your AI visibility. AI systems can crawl it, cite it, and use it to recommend you for specific searches.',
+        deliverableType: 'One-Page Website Copy Package',
+        deliverable: pageContent,
+        isCode: false,
+        where: 'Use this content to build a one-page website on Carrd, Google Sites, or any free website builder. The page just needs to be publicly accessible.',
+        prompt: 'I need to build a simple one-page website for my business. Here is all the content I need on the page: [paste content above]. Please write the complete HTML for a clean, professional one-page site using this content. Make it mobile-friendly and include basic meta tags for SEO.'
+      });
+    }
+  }
+
+  return fixes;
+}
+
+function buildFixCard(fix, index) {
+  const impactClass = fix.impact + '-impact';
+  const deliverableId = 'fix-del-' + index;
+  const promptId = 'fix-prompt-' + index;
+
+  return `
+    <div class="fix-card" id="fix-card-${index}">
+      <div class="fix-card-header">
+        <div class="fix-number ${impactClass}" id="fix-num-${index}">${index + 1}</div>
+        <div class="fix-problem">
+          <div class="fix-problem-title">${esc(fix.title)}</div>
+          <div class="fix-problem-why">${esc(fix.why)}</div>
+        </div>
+        <button class="fix-apply-btn" onclick="markFixDone(${index})" id="fix-btn-${index}">Mark done</button>
+      </div>
+
+      <div class="fix-card-body">
+
+        <div class="fix-deliverable">
+          <div class="fix-deliverable-label">
+            <span class="fix-deliverable-type">${esc(fix.deliverableType)}</span>
+            <button class="fix-copy-btn" onclick="copyFixContent('${deliverableId}', this)">Copy</button>
+          </div>
+          <div class="fix-deliverable-content ${fix.isCode ? 'is-code' : ''}" id="${deliverableId}">${esc(fix.deliverable)}</div>
+        </div>
+
+        <div class="fix-where">
+          <span class="fix-where-arrow">-></span>
+          <span class="fix-where-text">${esc(fix.where)}</span>
+        </div>
+
+        <div class="fix-prompt">
+          <div class="fix-prompt-header">
+            <span class="fix-prompt-label">AI Prompt - Paste into ChatGPT or Claude</span>
+            <button class="fix-copy-btn" onclick="copyFixContent('${promptId}', this)">Copy</button>
+          </div>
+          <div class="fix-prompt-content" id="${promptId}">${esc(fix.prompt)}</div>
+        </div>
+
+      </div>
+
+      <div class="fix-done-bar">
+        <span>Fix applied</span>
+      </div>
+    </div>
+  `;
+}
+
+function copyFixContent(id, btn) {
+  const el = $(id);
+  if (!el) return;
+  copyText(el.textContent, btn);
+}
+
+function markFixDone(index) {
+  const card = $('fix-card-' + index);
+  const btn  = $('fix-btn-' + index);
+  const num  = $('fix-num-' + index);
+
+  if (card.classList.contains('applied')) {
+    card.classList.remove('applied');
+    btn.classList.remove('applied');
+    btn.textContent = 'Mark done';
+    num.classList.remove('done');
+    fixesDone = Math.max(0, fixesDone - 1);
+  } else {
+    card.classList.add('applied');
+    btn.classList.add('applied');
+    btn.textContent = 'Done';
+    num.classList.add('done');
+    fixesDone++;
+  }
+
+  $('fixes-done').textContent = fixesDone;
+  const pct = fixesTotal > 0 ? (fixesDone / fixesTotal * 100) : 0;
+  $('progress-fill').style.width = pct + '%';
+
+  // Update status when all done
+  if (fixesDone === fixesTotal && fixesTotal > 0) {
+    $('status-state').textContent = 'You are ready to be found.';
+    $('status-sub').textContent = 'All fixes applied. AI systems can now recommend you.';
+    $('status-indicator').className = 'status-indicator ready';
+  }
+}
+
+
+function setText(id, text) { const el=$(id); if(el) el.textContent=text; }
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// == PRODUCT MODE ==
+function openProductMode() {
+  $('product-overlay').classList.add('open');
+  const d = analysisData;
+  if (!d || !d.industry) return;
+  $('prefill-notice').classList.remove('hidden');
+  if (d.path === 'A') {
+    if (d.detectedProduct     && !$('prod-name').value)     $('prod-name').value     = d.detectedProduct;
+    if (d.detectedProductDesc && !$('prod-desc').value)     $('prod-desc').value     = d.detectedProductDesc;
+    if (d.detectedCustomer    && !$('prod-customer').value) $('prod-customer').value = d.detectedCustomer;
+    if (d.detectedPrice       && !$('prod-price').value)    $('prod-price').value    = d.detectedPrice;
+  } else {
+    if (d.bizDesc  && !$('prod-desc').value)     $('prod-desc').value     = d.bizDesc;
+    if (d.location && !$('prod-customer').value) $('prod-customer').value = 'Customers in ' + d.location;
+  }
+}
+
+function closeProductMode() { $('product-overlay').classList.remove('open'); }
+
+async function handleProductAnalyze() {
+  if (!validate([
+    { id:'prod-name',     msg:'Please enter your product or service name.' },
+    { id:'prod-desc',     msg:'Please describe what it does.' },
+    { id:'prod-customer', msg:'Please describe who it is for.' },
+  ])) return;
+
+  const btn = document.querySelector('.modal-body .btn-analyze');
+  const origText = btn.textContent;
+  btn.textContent = 'Analyzing...';
+  btn.disabled = true;
+
+  const prodData = {
+    name:     $('prod-name').value.trim(),
+    desc:     $('prod-desc').value.trim(),
+    customer: $('prod-customer').value.trim(),
+    price:    $('prod-price').value.trim(),
+    diff:     $('prod-diff').value.trim(),
+    industry: analysisData.industry || '',
+  };
+
+  try {
+    const prompt = `You are a GEO expert analyzing a specific product or service for AI recommendation visibility.
+
+Industry: ${prodData.industry}
+Product/Service: ${prodData.name}
+What It Does: ${prodData.desc}
+Who It's For: ${prodData.customer}
+Price: ${prodData.price || 'Not specified'}
+What Makes It Different: ${prodData.diff || 'Not specified'}
+
+Return ONLY valid JSON:
+{
+  "aiDesc": "<AI-ready product description 100-150 words structured for how AI systems cite and recommend products>",
+  "queries": [
+    {"q":"<exact conversational question someone asks ChatGPT or Perplexity when looking for this>","a":"<optimized answer that positions this product as the recommendation>"}
+  ],
+  "schema": "<complete Product schema JSON-LD as a string>"
+}
+
+Include exactly 4 query pairs. Make questions sound like real human language.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getAnthropicKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{ role:'user', content: prompt }]
+      })
+    });
+
+    const result = await res.json();
+    if (result.error) {
+      throw new Error('Anthropic API: ' + (result.error.message || JSON.stringify(result.error)));
+    }
+    const text   = (result.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const clean  = text.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
+    const data   = JSON.parse(clean);
+
+    setText('out-prod-desc', data.aiDesc || '');
+
+    if (data.queries && data.queries.length) {
+      $('out-prod-queries').innerHTML = data.queries.map(q => `
+        <div class="faq-item">
+          <div class="faq-q">${esc(q.q)}</div>
+          <div class="faq-a">${esc(q.a)}</div>
+        </div>
+      `).join('');
+    }
+
+    setText('out-prod-schema', data.schema || '');
+    $('product-inputs').classList.add('hidden');
+    $('product-results').classList.remove('hidden');
+
+  } catch(e) {
+    setText('out-prod-desc', 'Analysis failed -- please try again.');
+    $('product-inputs').classList.add('hidden');
+    $('product-results').classList.remove('hidden');
+  }
+
+  btn.textContent = origText;
+  btn.disabled    = false;
+}
+
+function resetProductMode() {
+  $('product-inputs').classList.remove('hidden');
+  $('product-results').classList.add('hidden');
+  $('prefill-notice').classList.add('hidden');
+  ['prod-name','prod-desc','prod-customer','prod-price','prod-diff'].forEach(id => $(id).value = '');
+}
+
+// == RESET ==
+function resetTool() {
+  analysisData = {};
+  selectedPlatforms = [];
+  apiResult = null;
+  $('industry').value = '';
+  $('url-input').value = '';
+  $('biz-name').value = '';
+  $('biz-location').value = '';
+  $('biz-desc').value = '';
+  $('biz-bio').value = '';
+  document.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.path-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  currentPath = 'A';
+  $('path-a').classList.remove('hidden');
+  $('path-b').classList.add('hidden');
+  $('score-arc').style.strokeDashoffset = '251';
+  $('score-number').textContent = '--';
+  document.querySelectorAll('.main-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', i===0));
+
+  showScreen('screen-entry');
+}
+</script>
+</body>
+</html>
