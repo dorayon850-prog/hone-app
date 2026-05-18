@@ -963,6 +963,30 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 }
 
 /* == UTILITY == */
+.field-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  font-family: 'DM Mono', monospace;
+  line-height: 1.5;
+}
+
+.manual-toggle {
+  background: none;
+  border: 1px dashed var(--border-hi);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.75rem;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.18s;
+}
+.manual-toggle:hover { border-color: var(--gold); color: var(--text-sec); }
+
+
 
 .hidden { display: none !important; }
 .field-error { color: var(--red); font-size: 0.72rem; margin-top: 0.35rem; font-family: 'DM Mono', monospace; }
@@ -1010,40 +1034,34 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
         </select>
       </div>
 
-      <!-- Firecrawl key - Path A only -->
-      <!-- Path toggle -->
+      <!-- Smart input — URL or business name -->
       <div class="field-block">
-        <label class="field-label">Website</label>
-        <div class="path-toggle">
-          <button type="button" class="path-btn active" data-path="A">I have a website</button>
-          <button type="button" class="path-btn" data-path="B">I don't have a website</button>
-        </div>
+        <label class="field-label">Website URL or Business Name</label>
+        <input type="text" id="smart-input" placeholder="turnersdrop.com  or  Turners Drop, Houston TX">
+        <p class="field-hint">Enter a website URL to analyze — or a business name and city to find everything automatically</p>
       </div>
 
-      <!-- Path A -->
-      <div id="path-a" class="field-block">
-        <label class="field-label">Website URL</label>
-        <input type="text" id="url-input" placeholder="https://yourbusiness.com">
+      <!-- Manual fallback toggle -->
+      <div class="field-block">
+        <button type="button" class="manual-toggle" id="manual-toggle" onclick="toggleManual()">
+          No website or online presence? Describe manually
+        </button>
       </div>
 
-      <!-- Path B -->
-      <div id="path-b" class="hidden">
-
+      <!-- Manual Path B fields — hidden by default -->
+      <div id="manual-fields" class="hidden">
         <div class="field-block">
           <label class="field-label">Business Name</label>
           <input type="text" id="biz-name" placeholder="Your business name">
         </div>
-
         <div class="field-block">
           <label class="field-label">City & State</label>
           <input type="text" id="biz-location" placeholder="Houston, TX">
         </div>
-
         <div class="field-block">
           <label class="field-label">What You Do</label>
           <textarea id="biz-desc" placeholder="Describe what your business does and who it serves..." rows="3" style="resize:vertical;"></textarea>
         </div>
-
         <div class="field-block">
           <label class="field-label">Where You Currently Exist</label>
           <div class="platform-grid">
@@ -1057,24 +1075,18 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
             <span class="platform-chip" data-platform="Other">Other</span>
           </div>
         </div>
-
         <div class="field-block">
           <label class="field-label">Current Bio or Description <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
-          <textarea id="biz-bio" placeholder="Paste your current Google Business Profile description, social bio, or any existing copy..." rows="3" style="resize:vertical;"></textarea>
+          <textarea id="biz-bio" placeholder="Paste your current business description, social bio, or any existing copy..." rows="3" style="resize:vertical;"></textarea>
         </div>
-
       </div>
 
-      <button type="button" class="btn-analyze" onclick="handleAnalyze()">Analyze -></button>
+      <button type="button" class="btn-analyze" onclick="handleAnalyze()">Analyze</button>
 
     </div>
   </div>
 </div>
 
-
-<!-- ════════════════════════════════════
-     SCREEN 2 - SCAN
-════════════════════════════════════ -->
 <div id="screen-scan" class="screen">
   <div class="scan-wordmark">Hone</div>
   <div class="scan-inner">
@@ -1232,16 +1244,16 @@ function showScreen(id) {
 
 }
 
-// == PATH TOGGLE ==
-document.querySelectorAll('.path-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.path-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentPath = btn.dataset.path;
-    $('path-a').classList.toggle('hidden', currentPath !== 'A');
-    $('path-b').classList.toggle('hidden', currentPath !== 'B');
-  });
-});
+// == MANUAL TOGGLE ==
+let manualMode = false;
+function toggleManual() {
+  manualMode = !manualMode;
+  $('manual-fields').classList.toggle('hidden', !manualMode);
+  $('smart-input').closest('.field-block').classList.toggle('hidden', manualMode);
+  $('manual-toggle').textContent = manualMode
+    ? 'Use website URL or business name instead'
+    : 'No website or online presence? Describe manually';
+}
 
 // == PLATFORM CHIPS ==
 document.querySelectorAll('.platform-chip').forEach(chip => {
@@ -1311,35 +1323,54 @@ function validate(fields) {
 }
 
 // == ANALYZE ==
+function isUrl(str) {
+  return /^https?:\/\//i.test(str) || /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/i.test(str);
+}
+
 function handleAnalyze() {
   const industry = $('industry').value;
   if (!industry) { $('industry').classList.add('input-err'); return; }
 
-  if (currentPath === 'A') {
-    if (!validate([{ id:'url-input', msg:'Please enter your website URL.' }])) return;
+  document.querySelectorAll('.field-error').forEach(el => el.remove());
+  document.querySelectorAll('.input-err').forEach(el => el.classList.remove('input-err'));
 
-    let url = $('url-input').value.trim();
-    if (!url.startsWith('http')) url = 'https://' + url;
-    analysisData = { path:'A', industry, url };
-  } else {
+  if (manualMode) {
     if (!validate([
       { id:'biz-name',     msg:'Please enter your business name.' },
       { id:'biz-location', msg:'Please enter your city and state.' },
       { id:'biz-desc',     msg:'Please describe what your business does.' },
     ])) return;
     analysisData = {
-      path:'B', industry,
+      path: 'B', industry,
       bizName:    $('biz-name').value.trim(),
       location:   $('biz-location').value.trim(),
       bizDesc:    $('biz-desc').value.trim(),
       platforms:  [...selectedPlatforms],
       currentBio: $('biz-bio').value.trim(),
     };
+  } else {
+    const input = $('smart-input').value.trim();
+    if (!input) {
+      $('smart-input').classList.add('input-err');
+      const p = document.createElement('p');
+      p.className = 'field-error';
+      p.textContent = 'Please enter a website URL or business name.';
+      $('smart-input').parentNode.insertBefore(p, $('smart-input').nextSibling);
+      return;
+    }
+    if (isUrl(input)) {
+      let url = input;
+      if (!url.startsWith('http')) url = 'https://' + url;
+      analysisData = { path: 'AC', industry, url, inputType: 'url' };
+    } else {
+      analysisData = { path: 'AC', industry, businessQuery: input, inputType: 'name' };
+    }
   }
 
   showScreen('screen-scan');
   runScan();
 }
+
 
 // == ANALYZE VIA NETLIFY PROXY ==
 async function analyzeWithClaude(data) {
@@ -1370,13 +1401,13 @@ function runScan() {
   logEl.innerHTML = '';
   apiResult = null;
 
-  const linesA = [
-    'Connecting to your website...',
-    'Mapping your site structure...',
-    'Reading your key pages...',
+  const linesAC = [
+    'Searching for your business online...',
+    'Reading your website...',
+    'Finding your public listings...',
     'Analyzing GEO signals...',
-    'Evaluating entity clarity...',
-    'Building your visibility report...',
+    'Evaluating AI visibility...',
+    'Building your fix report...',
   ];
 
   const linesB = [
@@ -1387,7 +1418,7 @@ function runScan() {
     'Building your action plan...',
   ];
 
-  const lines = analysisData.path === 'A' ? linesA : linesB;
+  const lines = analysisData.path === 'AC' ? linesAC : linesB;
   const stepPct = 100 / lines.length;
 
   lines.forEach(text => {
@@ -1478,8 +1509,8 @@ let fixesTotal = 0;
 function populateResults() {
   const d = analysisData;
   const r = apiResult;
-  const name = d.path === 'A'
-    ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0]
+  const name = d.path === 'AC'
+    ? (d.url ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0] : d.businessQuery)
     : d.bizName;
 
   const pgInfo = d.pageCount ? ' - ' + d.pageCount + ' pages read' : '';
@@ -1539,7 +1570,7 @@ function populateResults() {
   $('fix-queue').innerHTML = fixes.map((fix, i) => buildFixCard(fix, i)).join('');
 
   // Store for product mode prefill
-  if (d.path === 'A') {
+  if (d.path === 'AC') {
     d.detectedProduct     = r.detectedProduct     || '';
     d.detectedProductDesc = r.detectedProductDesc || '';
     d.detectedCustomer    = r.detectedCustomer    || '';
@@ -1549,7 +1580,7 @@ function populateResults() {
 
 function buildFixes(d, r) {
   const fixes = [];
-  const isA = d.path === 'A';
+  const isA = d.path === 'AC';
   const name = isA
     ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0]
     : d.bizName;
@@ -1705,6 +1736,26 @@ function buildFixes(d, r) {
     }
   }
 
+  // Add listings consistency fix if available
+  if (isA && r.listingsConsistency) {
+    fixes.push({
+      impact: 'medium',
+      title: 'Inconsistent business information across public platforms',
+      why: r.listingsConsistency,
+      deliverableType: 'Consistent Business Description',
+      deliverable: r.bizDesc || '',
+      isCode: false,
+      where: 'Use this exact description on your website, Google Business Profile, Yelp, LinkedIn, and every directory you appear in. Consistency is a key AI credibility signal.',
+      prompt: 'I need to update my business description to be consistent everywhere. Here is the description to use on all platforms: [paste description above]. Which platforms should I prioritize updating first for maximum AI visibility?'
+    });
+  }
+
+  // Add sources analyzed card if multiple sources were found
+  if (isA && r.sourcesAnalyzed && r.sourcesAnalyzed.length > 1) {
+    const sourceList = r.sourcesAnalyzed.join(', ');
+    console.log('Sources analyzed:', sourceList);
+  }
+
   return fixes;
 }
 
@@ -1810,7 +1861,7 @@ function openProductMode() {
   const d = analysisData;
   if (!d || !d.industry) return;
   $('prefill-notice').classList.remove('hidden');
-  if (d.path === 'A') {
+  if (d.path === 'AC') {
     if (d.detectedProduct     && !$('prod-name').value)     $('prod-name').value     = d.detectedProduct;
     if (d.detectedProductDesc && !$('prod-desc').value)     $('prod-desc').value     = d.detectedProductDesc;
     if (d.detectedCustomer    && !$('prod-customer').value) $('prod-customer').value = d.detectedCustomer;
@@ -1926,16 +1977,14 @@ function resetTool() {
   selectedPlatforms = [];
   apiResult = null;
   $('industry').value = '';
-  $('url-input').value = '';
+  $('smart-input').value = '';
   $('biz-name').value = '';
   $('biz-location').value = '';
   $('biz-desc').value = '';
   $('biz-bio').value = '';
   document.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('active'));
-  document.querySelectorAll('.path-btn').forEach((b,i) => b.classList.toggle('active', i===0));
-  currentPath = 'A';
-  $('path-a').classList.remove('hidden');
-  $('path-b').classList.add('hidden');
+  selectedPlatforms = [];
+  if (manualMode) toggleManual();
   $('score-arc').style.strokeDashoffset = '251';
   $('score-number').textContent = '--';
   document.querySelectorAll('.main-tab').forEach((t,i) => t.classList.toggle('active', i===0));
