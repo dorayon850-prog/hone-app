@@ -33,6 +33,7 @@ exports.handler = async (event) => {
     'anthropic-version': '2023-06-01',
   };
 
+  // ── Scrape a URL with Firecrawl ──
   async function scrapePage(url) {
     try {
       const res = await fetch('https://api.firecrawl.dev/v2/scrape', {
@@ -46,6 +47,45 @@ exports.handler = async (event) => {
     } catch(e) { return ''; }
   }
 
+  // ── Use Claude web search to read a social page ──
+  async function readViaClaude(url, platform) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: ANT_HEADERS,
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 600,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{
+            role: 'user',
+            content: 'Visit this ' + platform + ' page and tell me: the business name, bio/description, what they sell or offer, who their audience is, and any key details visible. URL: ' + url + '. Return only the plain text of what you find — no commentary.'
+          }],
+        }),
+      });
+      const d = await res.json();
+      const text = (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      return text.slice(0, 2000);
+    } catch(e) { return ''; }
+  }
+
+  // ── Platforms readable directly via Firecrawl ──
+  const DIRECT_PLATFORMS = ['youtube', 'facebook', 'linkedin', 'yelp', 'google', 'other'];
+  // ── Platforms that need web search (login-walled) ──
+  const SEARCH_PLATFORMS = ['instagram', 'tiktok'];
+
+  // ── Read a social link based on platform ──
+  async function readSocialLink(platform, url) {
+    if (DIRECT_PLATFORMS.includes(platform)) {
+      const md = await scrapePage(url);
+      return { platform, url, content: md, method: 'direct' };
+    } else {
+      const text = await readViaClaude(url, platform);
+      return { platform, url, content: text, method: 'search' };
+    }
+  }
+
+  // ── Find listings via web search ──
   async function findListings(query) {
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -57,7 +97,7 @@ exports.handler = async (event) => {
           tools: [{ type: 'web_search_20250305', name: 'web_search' }],
           messages: [{
             role: 'user',
-            content: 'Search for this business and find: 1) official website URL 2) Google Business Profile URL 3) Yelp listing URL 4) LinkedIn company page URL. Business: ' + query + '. Return ONLY JSON with keys: website, googleBusiness, yelp, linkedin. Use empty string if not found.'
+            content: 'Find these for: ' + query + '. Return ONLY JSON: {"website":"","googleBusiness":"","yelp":"","linkedin":""}. Use empty string if not found.'
           }],
         }),
       });
@@ -69,6 +109,7 @@ exports.handler = async (event) => {
     return { website: '', googleBusiness: '', yelp: '', linkedin: '' };
   }
 
+  // ── Crawl website ──
   async function crawlWebsite(url) {
     const pages = [];
     try {
@@ -95,6 +136,9 @@ exports.handler = async (event) => {
     return pages;
   }
 
+  // ════════════════════════════════════════
+  // PATH AC — Website URL or Business Name
+  // ════════════════════════════════════════
   let allContent = [];
   let websiteUrl = '';
   let listingsFound = {};
@@ -132,40 +176,70 @@ exports.handler = async (event) => {
           if (md) allContent.push({ source: s.label, url: listingsFound[s.key], content: md });
         })
     );
+
+  // ════════════════════════════════════════
+  // PATH B — Manual + Social Links
+  // ════════════════════════════════════════
+  } else if (data.path === 'B') {
+    const socialLinks = data.socialLinks || {};
+    const linkEntries = Object.entries(socialLinks).filter(([, url]) => url);
+
+    if (linkEntries.length > 0) {
+      // Read all social links in parallel
+      const reads = await Promise.allSettled(
+        linkEntries.map(([platform, url]) => readSocialLink(platform, url))
+      );
+      reads.forEach(r => {
+        if (r.status === 'fulfilled' && r.value.content) {
+          allContent.push({
+            source: r.value.platform.toUpperCase(),
+            url: r.value.url,
+            content: r.value.content,
+            method: r.value.method,
+          });
+        }
+      });
+    }
   }
 
+  // ════════════════════════════════════════
+  // CLAUDE ANALYSIS
+  // ════════════════════════════════════════
   const system = 'You are a GEO expert helping small businesses become visible to AI recommendation systems. Return ONLY valid JSON with no markdown, no backticks, no explanation.';
   let userMessage = '';
 
   if (data.path === 'AC') {
     const contentBlock = allContent.length > 0
       ? allContent.map(c => '--- ' + c.source + ': ' + c.url + ' ---\n' + c.content).join('\n\n')
-      : 'No content retrieved. Analyze based on industry only.';
-
+      : 'No content retrieved.';
     const inputDesc = data.inputType === 'url' ? 'URL: ' + data.url : 'Business search: ' + data.businessQuery;
 
-    userMessage = 'Analyze the complete public GEO presence of this business.\n\n' +
-      inputDesc + '\nIndustry: ' + data.industry + '\nSources: ' + allContent.length + '\n\n' +
-      'CONTENT:\n' + contentBlock + '\n\n' +
-      'Return this JSON:\n' +
-      '{"score":<0-100>,"entity":"<entity statement using real details>","bizDesc":"<100-150 word AI-optimized description>",' +
-      '"faqs":[{"q":"<AI query question>","a":"<specific answer>"}],' +
-      '"positioning":["<statement 1>","<statement 2>","<statement 3>"],' +
-      '"schemaNote":"<placement instruction — mention platform if detected>",' +
-      '"listingsConsistency":"<are name/description/category consistent across all surfaces? what is inconsistent?>",' +
-      '"detectedProduct":"<main product or service found>","detectedProductDesc":"<one sentence>",' +
-      '"detectedCustomer":"<who it is for>","detectedPrice":"<price if found or empty string>"}\n\n' +
-      'Requirements: 5 FAQ pairs, 3 positioning statements. Be specific to actual content.';
+    userMessage = 'Analyze GEO presence.\n\n' + inputDesc + '\nIndustry: ' + data.industry + '\n\nCONTENT:\n' + contentBlock + '\n\n' +
+      'Return JSON:\n{"score":<0-100>,"entity":"<entity statement>","bizDesc":"<100-150 word description>",' +
+      '"faqs":[{"q":"<AI query>","a":"<answer>"}],"positioning":["<1>","<2>","<3>"],' +
+      '"schemaNote":"<placement instruction>","listingsConsistency":"<consistency across surfaces>",' +
+      '"detectedProduct":"<product>","detectedProductDesc":"<one sentence>","detectedCustomer":"<who>","detectedPrice":"<price or empty>"}\n\n' +
+      '5 FAQs, 3 positioning statements. Be specific to real content found.';
+
   } else {
-    userMessage = 'Analyze GEO readiness for: ' + data.bizName + ' in ' + data.location + '\n' +
-      'Industry: ' + data.industry + '\nDoes: ' + data.bizDesc + '\n' +
-      'Platforms: ' + ((data.platforms || []).join(', ') || 'None') + '\n' +
-      'Bio: ' + (data.currentBio || 'None') + '\n\n' +
-      'Return JSON: {"score":<0-40>,"gbpDesc":"<750 char max GBP description>",' +
-      '"gbpFaqs":[{"q":"","a":""}],"directory":"<100-150 word directory description>",' +
-      '"pageHeadline":"<website headline>","pageDesc":"<2 paragraph description>",' +
-      '"pageServices":"<3-4 services with descriptions>","pageFaqs":[{"q":"","a":""}]}\n\n' +
-      'Requirements: 3 GBP FAQs, 3 page FAQs. Last action step: build one-page website.';
+    // Path B — include social content if found
+    const socialBlock = allContent.length > 0
+      ? '\n\nSOCIAL CONTENT RETRIEVED:\n' + allContent.map(c => '--- ' + c.source + ' ---\n' + c.content).join('\n\n')
+      : '';
+
+    userMessage = 'Analyze GEO readiness.\n\n' +
+      'Business: ' + data.bizName + '\nLocation: ' + data.location + '\nIndustry: ' + data.industry + '\n' +
+      'Does: ' + data.bizDesc + '\nBio: ' + (data.currentBio || 'None') +
+      socialBlock + '\n\n' +
+      'Return JSON:\n{"score":<0-40>,' +
+      '"gbpDesc":"<750 char max GBP description using real details from social content if available>",' +
+      '"gbpFaqs":[{"q":"","a":""}],' +
+      '"directory":"<100-150 word directory description>",' +
+      '"pageHeadline":"<website headline>",' +
+      '"pageDesc":"<2 paragraphs>",' +
+      '"pageServices":"<3-4 services>",' +
+      '"pageFaqs":[{"q":"","a":""}]}\n\n' +
+      '3 GBP FAQs, 3 page FAQs. Use real details from social content where available.';
   }
 
   try {
@@ -195,6 +269,7 @@ exports.handler = async (event) => {
     const result = JSON.parse(clean);
     result.pageCount = allContent.length;
     result.listingsFound = listingsFound;
+    result.sourcesRead = allContent.map(c => ({ source: c.source, method: c.method || 'direct' }));
 
     return { statusCode: 200, headers, body: JSON.stringify({ result }) };
 
