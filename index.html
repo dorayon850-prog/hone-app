@@ -971,6 +971,50 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
   line-height: 1.5;
 }
 
+.social-links-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.social-link-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.75rem;
+  transition: border-color 0.2s;
+}
+
+.social-link-row:focus-within {
+  border-color: var(--gold);
+}
+
+.social-link-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.social-link-input {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0.2rem 0;
+  font-size: 0.82rem;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  outline: none;
+}
+
+.social-link-input::placeholder {
+  color: var(--text-muted);
+}
+
 .manual-toggle {
   background: none;
   border: 1px dashed var(--border-hi);
@@ -1062,22 +1106,49 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
           <label class="field-label">What You Do</label>
           <textarea id="biz-desc" placeholder="Describe what your business does and who it serves..." rows="3" style="resize:vertical;"></textarea>
         </div>
+
         <div class="field-block">
-          <label class="field-label">Where You Currently Exist</label>
-          <div class="platform-grid">
-            <span class="platform-chip" data-platform="Google Business Profile">Google Business Profile</span>
-            <span class="platform-chip" data-platform="Yelp">Yelp</span>
-            <span class="platform-chip" data-platform="Facebook">Facebook</span>
-            <span class="platform-chip" data-platform="Instagram">Instagram</span>
-            <span class="platform-chip" data-platform="TikTok">TikTok</span>
-            <span class="platform-chip" data-platform="Etsy">Etsy</span>
-            <span class="platform-chip" data-platform="Amazon">Amazon</span>
-            <span class="platform-chip" data-platform="Other">Other</span>
+          <label class="field-label">Your Social & Business Links <span style="color:var(--text-muted);font-weight:400;">(paste any you have)</span></label>
+          <p class="field-hint">These get read and analyzed — the more you add the better your report</p>
+          <div class="social-links-grid">
+            <div class="social-link-row">
+              <span class="social-link-icon">📸</span>
+              <input type="text" id="link-instagram" placeholder="instagram.com/yourbusiness" class="social-link-input">
+            </div>
+            <div class="social-link-row">
+              <span class="social-link-icon">🎵</span>
+              <input type="text" id="link-tiktok" placeholder="tiktok.com/@yourbusiness" class="social-link-input">
+            </div>
+            <div class="social-link-row">
+              <span class="social-link-icon">▶️</span>
+              <input type="text" id="link-youtube" placeholder="youtube.com/@yourchannel" class="social-link-input">
+            </div>
+            <div class="social-link-row">
+              <span class="social-link-icon">👥</span>
+              <input type="text" id="link-facebook" placeholder="facebook.com/yourpage" class="social-link-input">
+            </div>
+            <div class="social-link-row">
+              <span class="social-link-icon">💼</span>
+              <input type="text" id="link-linkedin" placeholder="linkedin.com/company/yourcompany" class="social-link-input">
+            </div>
+            <div class="social-link-row">
+              <span class="social-link-icon">⭐</span>
+              <input type="text" id="link-yelp" placeholder="yelp.com/biz/yourname" class="social-link-input">
+            </div>
+            <div class="social-link-row">
+              <span class="social-link-icon">🗺️</span>
+              <input type="text" id="link-google" placeholder="maps.google.com/... or Google Maps link" class="social-link-input">
+            </div>
+            <div class="social-link-row">
+              <span class="social-link-icon">🛍️</span>
+              <input type="text" id="link-other" placeholder="Etsy, Amazon, or any other link" class="social-link-input">
+            </div>
           </div>
         </div>
+
         <div class="field-block">
           <label class="field-label">Current Bio or Description <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
-          <textarea id="biz-bio" placeholder="Paste your current business description, social bio, or any existing copy..." rows="3" style="resize:vertical;"></textarea>
+          <textarea id="biz-bio" placeholder="Paste your current bio, Google Business description, or any existing copy..." rows="3" style="resize:vertical;"></textarea>
         </div>
       </div>
 
@@ -1340,12 +1411,24 @@ function handleAnalyze() {
       { id:'biz-location', msg:'Please enter your city and state.' },
       { id:'biz-desc',     msg:'Please describe what your business does.' },
     ])) return;
+    // Collect social links — only include non-empty ones
+    const socialLinks = {};
+    const socialIds = ['instagram','tiktok','youtube','facebook','linkedin','yelp','google','other'];
+    socialIds.forEach(id => {
+      const val = $('link-' + id);
+      if (val && val.value.trim()) {
+        let url = val.value.trim();
+        if (!url.startsWith('http')) url = 'https://' + url;
+        socialLinks[id] = url;
+      }
+    });
+
     analysisData = {
       path: 'B', industry,
       bizName:    $('biz-name').value.trim(),
       location:   $('biz-location').value.trim(),
       bizDesc:    $('biz-desc').value.trim(),
-      platforms:  [...selectedPlatforms],
+      socialLinks,
       currentBio: $('biz-bio').value.trim(),
     };
   } else {
@@ -1982,8 +2065,10 @@ function resetTool() {
   $('biz-location').value = '';
   $('biz-desc').value = '';
   $('biz-bio').value = '';
-  document.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('active'));
-  selectedPlatforms = [];
+  ['instagram','tiktok','youtube','facebook','linkedin','yelp','google','other'].forEach(id => {
+    const el = $('link-' + id);
+    if (el) el.value = '';
+  });
   if (manualMode) toggleManual();
   $('score-arc').style.strokeDashoffset = '251';
   $('score-number').textContent = '--';
