@@ -1798,24 +1798,61 @@ function handleAnalyze() {
 }
 
 
-// == ANALYZE VIA NETLIFY PROXY ==
+// == TWO-STEP ANALYSIS: CRAWL THEN ANALYZE ==
 async function analyzeWithClaude(data) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 55000);
+  // Step 1 — Crawl (up to 24s)
+  let crawlResult = { allContent: [], listingsFound: {}, pageCount: 0 };
+
+  if (data.path === 'AC') {
+    const crawlController = new AbortController();
+    const crawlTimer = setTimeout(() => crawlController.abort(), 24000);
+    try {
+      const crawlRes = await fetch('/.netlify/functions/crawl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url:           data.url || '',
+          industry:      data.industry,
+          inputType:     data.inputType,
+          businessQuery: data.businessQuery || '',
+        }),
+        signal: crawlController.signal,
+      });
+      clearTimeout(crawlTimer);
+      if (crawlRes.ok) {
+        crawlResult = await crawlRes.json();
+      }
+    } catch(e) {
+      clearTimeout(crawlTimer);
+      // Continue to analysis even if crawl fails — Claude will note limitations
+    }
+  } else if (data.path === 'B') {
+    // Path B social reading handled inside analyze function
+    crawlResult = { allContent: [], listingsFound: {}, pageCount: 0 };
+  }
+
+  // Step 2 — Analyze (up to 22s)
+  const analyzeController = new AbortController();
+  const analyzeTimer = setTimeout(() => analyzeController.abort(), 22000);
   try {
-    const res = await fetch('/.netlify/functions/analyze', {
+    const analyzeRes = await fetch('/.netlify/functions/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ analysisData: data }),
-      signal: controller.signal,
+      body: JSON.stringify({
+        analysisData: data,
+        allContent:   crawlResult.allContent   || [],
+        listingsFound: crawlResult.listingsFound || {},
+      }),
+      signal: analyzeController.signal,
     });
-    clearTimeout(timer);
-    const json = await res.json();
-    if (!res.ok || json.error) throw new Error(json.error || 'Analysis failed — status ' + res.status);
+    clearTimeout(analyzeTimer);
+    const json = await analyzeRes.json();
+    if (!analyzeRes.ok || json.error) throw new Error(json.error || 'Analysis failed');
+    if (crawlResult.pageCount) json.result.pageCount = crawlResult.pageCount;
     return json.result;
   } catch(err) {
-    clearTimeout(timer);
-    if (err.name === 'AbortError') throw new Error('Analysis timed out — please try again.');
+    clearTimeout(analyzeTimer);
+    if (err.name === 'AbortError') throw new Error('Analysis timed out. Please try again.');
     throw err;
   }
 }
@@ -1829,11 +1866,11 @@ function runScan() {
 
   const linesAC = [
     'Searching for your business online...',
-    'Reading your website...',
+    'Mapping your full site structure...',
+    'Reading your pages...',
     'Finding your public listings...',
-    'Analyzing GEO signals...',
-    'Evaluating AI visibility...',
-    'Building your fix report...',
+    'Analyzing everything Claude found...',
+    'Building your report...',
   ];
 
   const linesB = [

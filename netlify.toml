@@ -4,8 +4,6 @@
 
 [functions]
   node_bundler = "esbuild"
-
-[functions."analyze"]
   timeout = 26
 
 [[headers]]
