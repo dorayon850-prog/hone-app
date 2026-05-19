@@ -1,14 +1,13 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const ANT_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANT_KEY) return res.status(500).json({ error: 'API key not configured.' });
 
-  const { analysisData: data, allContent = [], listingsFound = {} } = req.body;
+  const { analysisData: data, allContent = [], listingsFound = {} } = req.body || {};
   if (!data) return res.status(400).json({ error: 'Missing analysisData' });
 
   const ANT_H = {
@@ -17,66 +16,21 @@ export default async function handler(req, res) {
     'anthropic-version': '2023-06-01',
   };
 
-  const system = `You are a senior GEO analyst. Produce a thorough report worth $150-250.
-RULES: Always return 5-7 findings minimum. Be specific to actual content found. Score honestly. Return ONLY valid JSON — no markdown, no backticks.`;
+  const system = 'You are a senior GEO analyst. Produce a thorough report worth $150-250. Always return 5-7 findings minimum. Be specific to actual content. Score honestly. Return ONLY valid JSON — no markdown, no backticks.';
 
   const contentBlock = allContent.length > 0
     ? allContent.map(c => '--- ' + c.source + ': ' + (c.url || '') + ' ---\n' + (c.content || '').slice(0, 2500)).join('\n\n')
     : 'No content retrieved.';
 
-  const userMessage = data.path === 'AC'
-    ? `Comprehensive GEO analysis.
-${data.inputType === 'url' ? 'URL: ' + data.url : 'Business: ' + data.businessQuery}
-Industry: ${data.industry}
-Sources read: ${allContent.length}
+  let userMessage;
 
-CONTENT:
-${contentBlock}
-
-Return this JSON:
-{
-  "score": <0-100: no schema=max45, basic schema=max65, full GEO=70+>,
-  "aiView": "<2-3 sentences: what AI currently says when asked to recommend this business>",
-  "strengths": "<2-3 specific GEO strengths found>",
-  "weaknesses": "<2-3 specific gaps>",
-  "entity": "<complete entity statement: category, location, differentiator — use real details>",
-  "bizDesc": "<100-150 word AI-optimized description using actual products/services found>",
-  "faqs": [{"q":"<conversational AI query>","a":"<specific answer using real details>"}],
-  "positioning": ["<targets specific AI query>","<statement 2>","<statement 3>"],
-  "schemaNote": "<SPECIFIC: if Shopify say Online Store > Themes > Edit Code > theme.liquid. If WordPress say header.php or Yoast plugin>",
-  "listingsConsistency": "<what was found and whether information is consistent>",
-  "detectedProduct": "<main product or service>",
-  "detectedProductDesc": "<one sentence>",
-  "detectedCustomer": "<who it is for>",
-  "detectedPrice": "<price if found or empty>",
-  "sourcesAnalyzed": <array of source label strings>
-}
-5 FAQs minimum. 3 positioning statements. Score honestly.`
-
-    : `GEO analysis — business without website.
-Business: ${data.bizName}
-Location: ${data.location}
-Industry: ${data.industry}
-Description: ${data.bizDesc}
-Bio: ${data.currentBio || 'None'}
-${allContent.length > 0 ? 'SOCIAL CONTENT:\n' + contentBlock : ''}
-
-Return JSON:
-{
-  "score": <0-40>,
-  "aiView": "<what AI finds about this business>",
-  "strengths": "<what works>",
-  "weaknesses": "<primary gaps>",
-  "gbpDesc": "<optimized GBP description max 750 characters>",
-  "gbpFaqs": [{"q":"","a":""}],
-  "directory": "<100-150 word directory description>",
-  "pageHeadline": "<website headline>",
-  "pageDesc": "<2 paragraphs>",
-  "pageServices": "<3-4 services>",
-  "pageFaqs": [{"q":"","a":""}],
-  "listingsConsistency": "<what was found>"
-}
-3 GBP FAQs minimum. 3 page FAQs minimum.`;
+  if (data.path === 'AC') {
+    const inputDesc = data.inputType === 'url' ? 'URL: ' + data.url : 'Business: ' + data.businessQuery;
+    userMessage = 'Comprehensive GEO analysis.\n' + inputDesc + '\nIndustry: ' + data.industry + '\nSources: ' + allContent.length + '\n\nCONTENT:\n' + contentBlock + '\n\nReturn this JSON:\n{"score":<0-100>,"aiView":"<2-3 sentences about AI visibility>","strengths":"<2-3 specific strengths>","weaknesses":"<2-3 specific gaps>","entity":"<entity statement with category, location, differentiator>","bizDesc":"<100-150 word AI-optimized description>","faqs":[{"q":"<AI query>","a":"<specific answer>"}],"positioning":["<query-specific statement>","<statement 2>","<statement 3>"],"schemaNote":"<platform-specific instruction>","listingsConsistency":"<consistency observation>","detectedProduct":"<main product>","detectedProductDesc":"<one sentence>","detectedCustomer":"<who>","detectedPrice":"<price or empty>","sourcesAnalyzed":<array of source names>}\n\n5 FAQs minimum. 3 positioning statements. Score honestly: no schema=max45, basic schema=max65, full GEO=70+.';
+  } else {
+    const socialBlock = allContent.length > 0 ? '\nSOCIAL:\n' + contentBlock : '';
+    userMessage = 'GEO analysis — no website.\nBusiness: ' + data.bizName + '\nLocation: ' + data.location + '\nIndustry: ' + data.industry + '\nDescription: ' + data.bizDesc + '\nBio: ' + (data.currentBio || 'None') + socialBlock + '\n\nReturn JSON:\n{"score":<0-40>,"aiView":"<what AI finds>","strengths":"<what works>","weaknesses":"<gaps>","gbpDesc":"<750 char GBP description>","gbpFaqs":[{"q":"","a":""}],"directory":"<directory description>","pageHeadline":"<headline>","pageDesc":"<2 paragraphs>","pageServices":"<3-4 services>","pageFaqs":[{"q":"","a":""}],"listingsConsistency":"<observation>"}\n\n3 GBP FAQs minimum. 3 page FAQs minimum.';
+  }
 
   try {
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -85,7 +39,7 @@ Return JSON:
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2500,
-        system,
+        system: system,
         messages: [{ role: 'user', content: userMessage }],
       }),
     });
@@ -104,7 +58,7 @@ Return JSON:
     const clean = text.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
 
     if (!clean || clean[0] !== '{') {
-      return res.status(400).json({ error: 'Non-JSON response: ' + clean.slice(0,100) });
+      return res.status(400).json({ error: 'Non-JSON response: ' + clean.slice(0, 100) });
     }
 
     const result = JSON.parse(clean);
@@ -117,6 +71,6 @@ Return JSON:
   } catch(err) {
     return res.status(500).json({ error: 'Analysis failed: ' + err.message });
   }
-}
+};
 
-export const config = { maxDuration: 55 };
+module.exports.config = { maxDuration: 55 };
