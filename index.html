@@ -962,7 +962,263 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
   line-height: 1.65;
 }
 
+/* == REPORT TABS == */
+.report-tabs {
+  display: flex;
+  padding: 0 2rem;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  gap: 0;
+  position: sticky;
+  top: 72px;
+  background: rgba(6,5,15,0.97);
+  backdrop-filter: blur(12px);
+  z-index: 15;
+}
+
+.report-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-sec);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0.9rem 1.1rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s;
+  margin-bottom: -1px;
+}
+
+.report-tab:hover { color: var(--text); }
+.report-tab.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+.report-panel { display: none; }
+.report-panel.active { display: block; }
+
+.panel-inner {
+  padding: 2rem;
+  max-width: 760px;
+}
+
+/* == AI SNAPSHOT TAB == */
+.snapshot-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.snapshot-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--purple), var(--blue), transparent);
+}
+
+.snapshot-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--purple-light);
+  margin-bottom: 0.75rem;
+  font-family: 'DM Mono', monospace;
+}
+
+.snapshot-text {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.75;
+}
+
+/* == ANALYZED TAB == */
+.analyzed-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .analyzed-grid { grid-template-columns: 1fr; }
+}
+
+.analyzed-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+}
+
+.analyzed-card-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 0.4rem;
+}
+
+.analyzed-card-value {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.analyzed-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-sec);
+  margin-top: 0.2rem;
+  font-family: 'DM Mono', monospace;
+}
+
+.analyzed-pages-list {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.analyzed-page-item {
+  font-size: 0.72rem;
+  color: var(--text-sec);
+  font-family: 'DM Mono', monospace;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.analyzed-page-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+
+.consistency-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.consistency-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 0.5rem;
+}
+
+.consistency-text {
+  font-size: 0.85rem;
+  color: var(--text-sec);
+  line-height: 1.65;
+}
+
+/* == GEO CONTENT TAB == */
+.content-row {
+  margin-bottom: 2rem;
+}
+
+.content-row-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+  font-family: 'DM Mono', monospace;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.content-row-hint {
+  font-size: 0.75rem;
+  color: var(--text-sec);
+  line-height: 1.55;
+  margin-bottom: 0.6rem;
+  margin-top: 0.3rem;
+}
+
+.geo-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  position: relative;
+}
+
+.geo-block-text {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.75;
+  white-space: pre-wrap;
+  padding-right: 4rem;
+}
+
+.geo-block-code { background: #0D1117; }
+
+.geo-block-code-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--blue-light);
+}
+
+.geo-copy-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.geo-copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+.geo-copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+.faq-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.faq-q {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--blue-light);
+  margin-bottom: 0.35rem;
+}
+
+.faq-a {
+  font-size: 0.82rem;
+  color: var(--text-sec);
+  line-height: 1.65;
+}
+
 /* == UTILITY == */
+
 .field-hint {
   font-size: 0.68rem;
   color: var(--text-muted);
@@ -1198,13 +1454,100 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
     </div>
   </div>
 
-  <!-- Fix Queue -->
-  <div class="fix-queue" id="fix-queue"></div>
+  <!-- Report Tabs -->
+  <nav class="report-tabs">
+    <button class="report-tab active" data-rtab="snapshot">AI Snapshot</button>
+    <button class="report-tab" data-rtab="analyzed">What Was Analyzed</button>
+    <button class="report-tab" data-rtab="content">Your GEO Content</button>
+    <button class="report-tab" data-rtab="fixes">Your Fix Queue</button>
+  </nav>
 
-  <!-- Product Mode Trigger -->
+  <!-- TAB: AI Snapshot -->
+  <div class="report-panel active" id="rtab-snapshot">
+    <div class="panel-inner">
+      <div class="snapshot-card">
+        <div class="snapshot-label">What an AI system currently says when asked about your business</div>
+        <div class="snapshot-text" id="out-ai-view"></div>
+      </div>
+      <div class="snapshot-card">
+        <div class="snapshot-label">What is working in your favor</div>
+        <div class="snapshot-text" id="out-strengths"></div>
+      </div>
+      <div class="snapshot-card">
+        <div class="snapshot-label">What is holding you back</div>
+        <div class="snapshot-text" id="out-weaknesses"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: What Was Analyzed -->
+  <div class="report-panel" id="rtab-analyzed">
+    <div class="panel-inner">
+      <div class="analyzed-grid" id="analyzed-grid"></div>
+      <div class="consistency-block" id="consistency-block" style="display:none;">
+        <div class="consistency-label">Listings Consistency Check</div>
+        <div class="consistency-text" id="out-consistency"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Your GEO Content -->
+  <div class="report-panel" id="rtab-content">
+    <div class="panel-inner">
+
+      <div class="content-row">
+        <div class="content-row-label">Entity Statement</div>
+        <div class="content-row-hint">Paste this as the opening paragraph of your About page and Google Business Profile. This tells AI systems exactly what category your business belongs to.</div>
+        <div class="geo-block">
+          <div class="geo-block-text" id="out-entity"></div>
+          <button class="geo-copy-btn" data-target="out-entity">Copy</button>
+        </div>
+      </div>
+
+      <div class="content-row">
+        <div class="content-row-label">AI-Ready Business Description</div>
+        <div class="content-row-hint">Replace your current homepage description with this. Written the way AI systems read and cite business information.</div>
+        <div class="geo-block">
+          <div class="geo-block-text" id="out-biz-desc"></div>
+          <button class="geo-copy-btn" data-target="out-biz-desc">Copy</button>
+        </div>
+      </div>
+
+      <div class="content-row">
+        <div class="content-row-label">FAQ Pairs</div>
+        <div class="content-row-hint">Written in the language people use when asking AI systems for recommendations. Add these as a FAQ section on your homepage.</div>
+        <div id="out-faqs"></div>
+      </div>
+
+      <div class="content-row">
+        <div class="content-row-label">Positioning Statements</div>
+        <div class="content-row-hint">Three statements targeting specific AI search queries. Use across your homepage, About page, and product or service pages.</div>
+        <div id="out-positioning"></div>
+      </div>
+
+      <div class="content-row">
+        <div class="content-row-label">FAQ Schema Code</div>
+        <div class="content-row-hint" id="out-schema-note">Add this to the head section of your website. This is the single highest-impact GEO change you can make.</div>
+        <div class="geo-block geo-block-code">
+          <div class="geo-block-text geo-block-code-text" id="out-schema"></div>
+          <button class="geo-copy-btn" data-target="out-schema">Copy</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TAB: Your Fix Queue -->
+  <div class="report-panel" id="rtab-fixes">
+    <div class="panel-inner">
+      <div class="fix-queue" id="fix-queue"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
   <div class="results-footer">
     <button class="btn-ghost" style="flex:1;" onclick="resetTool()">New Analysis</button>
-    <button class="btn-product" onclick="openProductMode()">Analyze a Product or Service</button>
+    <button class="btn-product" onclick="openProductMode()">Deep Dive: Specific Product or Service</button>
   </div>
 
 </div>
@@ -1336,13 +1679,13 @@ document.querySelectorAll('.platform-chip').forEach(chip => {
   });
 });
 
-// == MAIN TABS ==
-document.querySelectorAll('.main-tab').forEach(btn => {
+// == REPORT TABS ==
+document.querySelectorAll('.report-tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.report-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.report-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
-    $('tab-' + btn.dataset.tab).classList.add('active');
+    $('rtab-' + btn.dataset.rtab).classList.add('active');
   });
 });
 
@@ -1586,7 +1929,7 @@ function animateScore() {
 }
 
 // == POPULATE RESULTS ==
-let fixesDone = 0;
+let fixesDone  = 0;
 let fixesTotal = 0;
 
 function populateResults() {
@@ -1596,10 +1939,10 @@ function populateResults() {
     ? (d.url ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0] : d.businessQuery)
     : d.bizName;
 
-  const pgInfo = d.pageCount ? ' - ' + d.pageCount + ' pages read' : '';
-  $('results-business-label').textContent = name + ' - ' + d.industry + pgInfo;
+  const pgInfo = d.pageCount ? ' -- ' + d.pageCount + ' sources read' : '';
+  $('results-business-label').textContent = name + ' -- ' + d.industry + pgInfo;
 
-  // Set status
+  // -- STATUS --
   const score = r ? (r.score || 20) : 0;
   d.computedScore = score;
 
@@ -1607,52 +1950,119 @@ function populateResults() {
   if (score >= 70) {
     statusClass = 'ready';
     statusState = 'Recommendation Ready';
-    statusSub = 'AI systems can find and recommend you. Apply these fixes to stay ahead.';
+    statusSub   = 'AI systems can find and recommend you. Apply these fixes to stay ahead.';
   } else if (score >= 35) {
     statusClass = 'partial';
     statusState = 'Partially Visible';
-    statusSub = "AI systems have found you but won't confidently recommend you yet.";
+    statusSub   = "AI systems have found you but won't confidently recommend you yet.";
   } else {
     statusClass = 'not-found';
     statusState = 'Not Found';
-    statusSub = 'AI systems cannot recommend you yet. Apply the fixes below to change that.';
+    statusSub   = 'AI systems cannot recommend you yet. Apply the fixes below to change that.';
   }
 
-  const indicator = $('status-indicator');
-  indicator.className = 'status-indicator ' + statusClass;
-  $('status-state').textContent = statusState;
-  $('status-sub').textContent = statusSub;
+  const ind = $('status-indicator');
+  ind.className = 'status-indicator ' + statusClass;
+  setText('status-state', statusState);
+  setText('status-sub',   statusSub);
+
+  // Reset tabs to first
+  document.querySelectorAll('.report-tab').forEach((t,i)  => t.classList.toggle('active', i===0));
+  document.querySelectorAll('.report-panel').forEach((p,i) => p.classList.toggle('active', i===0));
 
   if (!r) {
     const errMsg = analysisData.lastError || 'Unknown error';
-    $('fix-queue').innerHTML = `
-      <div style="padding:2rem;max-width:600px;">
-        <div style="background:var(--red-dim);border:1px solid var(--red);border-radius:8px;padding:1.25rem;margin-bottom:1rem;">
-          <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);font-family:'DM Mono',monospace;margin-bottom:0.5rem;">Analysis Failed</div>
-          <div style="font-size:0.82rem;color:var(--text);font-family:'DM Mono',monospace;word-break:break-all;">${esc(errMsg)}</div>
-        </div>
-        <div style="font-size:0.78rem;color:var(--text-sec);line-height:1.7;">
-          If you see a CORS or fetch error, the file needs to be served over HTTP rather than opened directly.<br><br>
-          In Terminal, navigate to this file's folder and run:<br>
-          <span style="font-family:'DM Mono',monospace;color:var(--blue);font-size:0.82rem;">python3 -m http.server 8080</span><br><br>
-          Then open: <span style="font-family:'DM Mono',monospace;color:var(--blue);font-size:0.82rem;">http://localhost:8080/hone-final.html</span>
-        </div>
-      </div>
-    `;
+    setText('out-ai-view', 'Analysis could not be completed. ' + errMsg);
     return;
   }
 
-  // Build fix cards from real data
+  // -- TAB 1: AI SNAPSHOT --
+  setText('out-ai-view',   r.aiView     || '');
+  setText('out-strengths', r.strengths  || '');
+  setText('out-weaknesses',r.weaknesses || '');
+
+  // -- TAB 2: WHAT WAS ANALYZED --
+  const grid = $('analyzed-grid');
+  grid.innerHTML = '';
+
+  const addCard = (label, value, sub, pages) => {
+    const card = document.createElement('div');
+    card.className = 'analyzed-card';
+    card.innerHTML = '<div class="analyzed-card-label">' + esc(label) + '</div>' +
+      '<div class="analyzed-card-value">' + esc(value) + '</div>' +
+      (sub ? '<div class="analyzed-card-sub">' + esc(sub) + '</div>' : '') +
+      (pages && pages.length ? '<div class="analyzed-pages-list">' +
+        pages.map(p => '<div class="analyzed-page-item"><span class="analyzed-page-dot"></span><span>' + esc(p) + '</span></div>').join('') +
+        '</div>' : '');
+    grid.appendChild(card);
+  };
+
+  const sources = r.sourcesAnalyzed || (r.sourcesRead ? r.sourcesRead.map(s => s.source) : []);
+  const websitePages = sources.filter(s => s === 'WEBSITE' || s.includes('WEBSITE'));
+  const listings = sources.filter(s => s !== 'WEBSITE' && !s.includes('WEBSITE'));
+
+  addCard('Status', statusState, 'Score: ' + score + '/100');
+  addCard('Industry', d.industry || '', '');
+  addCard('Website Pages Read', websitePages.length > 0 ? websitePages.length + ' pages' : 'No website found',
+    websitePages.length > 0 ? 'Homepage + key pages crawled' : 'Business name search used');
+  addCard('Public Listings Found', listings.length > 0 ? listings.length + ' listings' : 'None found',
+    listings.length > 0 ? listings.join(', ') : 'Google Business Profile, Yelp, LinkedIn not found');
+
+  // Listings consistency
+  if (r.listingsConsistency) {
+    const cb = $('consistency-block');
+    cb.style.display = 'block';
+    setText('out-consistency', r.listingsConsistency);
+  }
+
+  // -- TAB 3: GEO CONTENT --
+  setText('out-entity',   r.entity   || '');
+  setText('out-biz-desc', r.bizDesc  || '');
+
+  if (r.faqs && r.faqs.length) {
+    $('out-faqs').innerHTML = r.faqs.map(f => `
+      <div class="faq-item">
+        <div class="faq-q">${esc(f.q)}</div>
+        <div class="faq-a">${esc(f.a)}</div>
+      </div>
+    `).join('');
+  }
+
+  if (r.positioning && r.positioning.length) {
+    $('out-positioning').innerHTML = r.positioning.map((p, i) => `
+      <div class="geo-block" style="margin-bottom:0.6rem;">
+        <div class="geo-block-text" id="pos-${i}">${esc(p)}</div>
+        <button class="geo-copy-btn" data-target="pos-${i}">Copy</button>
+      </div>
+    `).join('');
+  }
+
+  if (r.faqs && r.faqs.length) {
+    const schemaObj = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": r.faqs.map(f => ({
+        "@type": "Question",
+        "name": f.q,
+        "acceptedAnswer": { "@type": "Answer", "text": f.a }
+      }))
+    };
+    setText('out-schema', '<script type="application/ld+json">\n' +
+      JSON.stringify(schemaObj, null, 2) + '\n<\/script>');
+  }
+
+  if (r.schemaNote) setText('out-schema-note', r.schemaNote);
+
+  // -- TAB 4: FIX QUEUE --
   const fixes = buildFixes(d, r);
   fixesTotal = fixes.length;
-  fixesDone = 0;
+  fixesDone  = 0;
   $('fixes-total').textContent = fixesTotal;
-  $('fixes-done').textContent = 0;
+  $('fixes-done').textContent  = 0;
   $('progress-fill').style.width = '0%';
-
   $('fix-queue').innerHTML = fixes.map((fix, i) => buildFixCard(fix, i)).join('');
 
-  // Store for product mode prefill
+  // Store for product mode
   if (d.path === 'AC') {
     d.detectedProduct     = r.detectedProduct     || '';
     d.detectedProductDesc = r.detectedProductDesc || '';
@@ -1663,41 +2073,38 @@ function populateResults() {
 
 function buildFixes(d, r) {
   const fixes = [];
-  const isA = d.path === 'AC';
-  const name = isA
-    ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0]
+  const isAC  = d.path === 'AC';
+  const name  = isAC
+    ? (d.url ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0] : d.businessQuery)
     : d.bizName;
 
-  if (isA) {
-    // Fix 1: Entity Statement
+  if (isAC) {
     if (r.entity) {
       fixes.push({
         impact: 'high',
-        title: 'AI systems cannot clearly identify what you are',
-        why: 'Without a clear entity definition, AI systems skip you when they cannot confidently match you to a search.',
+        title: 'AI systems cannot clearly identify what category your business belongs to',
+        why: 'Without a clear entity definition AI systems skip you when they cannot confidently match you to a search.',
         deliverableType: 'Entity Statement',
         deliverable: r.entity,
         isCode: false,
         where: 'Paste this as the first paragraph of your About page and your Google Business Profile description.',
-        prompt: 'I need to add the following text as the opening paragraph of my About page. Here is the text: "' + r.entity.slice(0, 120) + '..." Please add it naturally to my existing About page content without removing anything important.'
+        prompt: 'I need to add the following text as the opening paragraph of my About page. Here is the text: "' + (r.entity || '').slice(0,100) + '..." Please add it naturally to my existing About page content without removing anything important.'
       });
     }
 
-    // Fix 2: Business Description
     if (r.bizDesc) {
       fixes.push({
         impact: 'high',
-        title: 'Your business description is not written for AI systems',
+        title: 'Your business description is not written for AI recommendation systems',
         why: 'AI systems read your homepage copy to decide whether to recommend you. Generic descriptions get skipped.',
         deliverableType: 'AI-Ready Description',
         deliverable: r.bizDesc,
         isCode: false,
         where: 'Replace your current homepage intro or hero description with this text.',
-        prompt: 'Replace my current homepage hero text with the following description. Keep my existing headline but replace the body text beneath it: "' + r.bizDesc.slice(0, 100) + '..."'
+        prompt: 'Replace my current homepage hero text with the following description. Keep my existing headline but replace the body text beneath it: "' + (r.bizDesc || '').slice(0,100) + '..."'
       });
     }
 
-    // Fix 3: FAQ Schema
     if (r.faqs && r.faqs.length) {
       const schemaObj = {
         "@context": "https://schema.org",
@@ -1708,25 +2115,25 @@ function buildFixes(d, r) {
           "acceptedAnswer": { "@type": "Answer", "text": f.a }
         }))
       };
-      const schemaCode = '<script type="application/ld+json">\n' + JSON.stringify(schemaObj, null, 2) + '\n<\/script>';
-      const placement = r.schemaNote || 'Add this to the <head> section of your homepage.';
+      const schemaCode = '<script type="application/ld+json">\n' +
+        JSON.stringify(schemaObj, null, 2) + '\n<\/script>';
+      const placement = r.schemaNote || 'Add this to the head section of your homepage.';
       fixes.push({
         impact: 'high',
-        title: 'No FAQ schema found - AI systems are missing your Q&A content',
-        why: 'FAQ schema is one of the highest-impact GEO signals. AI systems pull directly from it when answering questions about businesses like yours.',
+        title: 'No FAQ schema -- AI systems cannot match questions to your content',
+        why: 'FAQ schema is the highest-impact GEO signal available. AI systems pull directly from it when answering questions about businesses like yours.',
         deliverableType: 'FAQ Schema Code',
         deliverable: schemaCode,
         isCode: true,
         where: placement,
-        prompt: 'Add the following FAQ schema code to the <head> section of my homepage. ' + placement + ' Here is the code to add: [paste the schema code above]. Give me step-by-step instructions for my platform.'
+        prompt: 'Add the following FAQ schema code to the head section of my homepage. ' + placement + ' Here is the code: [paste the schema code above]. Give me step-by-step instructions for my platform.'
       });
 
-      // Fix 4: FAQ Content
       const faqText = r.faqs.map(f => 'Q: ' + f.q + '\nA: ' + f.a).join('\n\n');
       fixes.push({
         impact: 'medium',
-        title: 'Missing FAQ section on your website',
-        why: 'AI systems match user questions to FAQ content on your site. Without it, a competitor with FAQs gets recommended instead.',
+        title: 'No FAQ section on your website',
+        why: 'AI systems match user questions to FAQ content on your site. Without it a competitor with FAQs gets recommended instead.',
         deliverableType: 'FAQ Content',
         deliverable: faqText,
         isCode: false,
@@ -1735,7 +2142,6 @@ function buildFixes(d, r) {
       });
     }
 
-    // Fix 5: Positioning statements
     if (r.positioning && r.positioning.length) {
       fixes.push({
         impact: 'medium',
@@ -1744,21 +2150,37 @@ function buildFixes(d, r) {
         deliverableType: 'Positioning Statements',
         deliverable: r.positioning.join('\n\n'),
         isCode: false,
-        where: 'Use these across your homepage, product pages, and Google Business Profile. Each one targets a specific AI query.',
-        prompt: 'Add these positioning statements to my website. Statement 1 goes in the hero area. Statement 2 goes on the About page. Statement 3 goes in the footer tagline area: [paste statements above].'
+        where: 'Use these across your homepage, product pages, and Google Business Profile. Each targets a specific AI query.',
+        prompt: 'Add these positioning statements to my website. Statement 1 goes in the hero area. Statement 2 goes on the About page. Statement 3 goes in the footer tagline: [paste statements above].'
       });
     }
 
-    // Fix 6: llms.txt
+    if (r.listingsConsistency) {
+      fixes.push({
+        impact: 'medium',
+        title: 'Inconsistent business information across public platforms',
+        why: r.listingsConsistency,
+        deliverableType: 'Consistent Business Description',
+        deliverable: r.bizDesc || r.entity || '',
+        isCode: false,
+        where: 'Use this exact description on your website, Google Business Profile, Yelp, LinkedIn, and every directory.',
+        prompt: 'I need to update my business description to be consistent everywhere. Here is the description to use on all platforms: [paste above]. Which platforms should I prioritize first for maximum AI visibility?'
+      });
+    }
+
+    const domain = d.url || (d.businessQuery || name);
+    const llmsContent = '# ' + name + '\n\n> ' + (r.entity || '').slice(0,200) +
+      '\n\n## Key Pages\n\n- Homepage: ' + (d.url || '') +
+      '\n\n## What We Offer\n\n' + (r.bizDesc || '').slice(0,300);
     fixes.push({
       impact: 'low',
-      title: 'No llms.txt file - AI crawlers lack a clear reading guide',
-      why: 'A simple text file that tells AI systems exactly what to read on your site. Takes 10 minutes to create.',
+      title: 'No llms.txt file -- AI crawlers lack a clear reading guide',
+      why: 'A simple text file telling AI systems exactly what to read on your site. Takes 10 minutes and signals AI-readiness.',
       deliverableType: 'llms.txt Content',
-      deliverable: '# ' + name + '\n\n> ' + (r.entity ? r.entity.slice(0, 200) : 'AI-powered business visibility tool.') + '\n\n## Key Pages\n\n- Homepage: ' + (d.url || '') + '\n- About: ' + (d.url || '') + '/about\n- Products: ' + (d.url || '') + '/products\n\n## What We Offer\n\n' + (r.bizDesc ? r.bizDesc.slice(0, 300) : ''),
+      deliverable: llmsContent,
       isCode: false,
-      where: 'Create a file called llms.txt at the root of your website. Access it at yourdomain.com/llms.txt.',
-      prompt: 'I need to create a file called llms.txt and host it at the root of my website so it is accessible at ' + (d.url || 'mydomain.com') + '/llms.txt. Here is the content for the file: [paste llms.txt content above]. How do I create and host this file on my platform?'
+      where: 'Create a file called llms.txt at the root of your website so it is accessible at yourdomain.com/llms.txt.',
+      prompt: 'I need to create a file called llms.txt hosted at the root of my website at ' + (d.url || 'mydomain.com') + '/llms.txt. Here is the content: [paste above]. How do I create and host this on my platform?'
     });
 
   } else {
@@ -1767,12 +2189,12 @@ function buildFixes(d, r) {
       fixes.push({
         impact: 'high',
         title: 'Your Google Business Profile description is not written for AI systems',
-        why: 'Google Business Profile is the most important GEO signal for businesses without a website. AI systems read it to form recommendations.',
+        why: 'Google Business Profile is the most important GEO signal for businesses without a website.',
         deliverableType: 'Google Business Profile Description',
         deliverable: r.gbpDesc,
         isCode: false,
-        where: 'Go to Google Business Profile, click Edit Profile, then Business Information, then Description. Paste this text.',
-        prompt: 'I need to update my Google Business Profile description. Please review this description and confirm it is under 750 characters and optimized for AI recommendations: [paste description above].'
+        where: 'Go to Google Business Profile, click Edit Profile, then Business Information, then Description.',
+        prompt: 'Review this Google Business Profile description and confirm it is under 750 characters and optimized for AI recommendations: [paste above].'
       });
     }
 
@@ -1781,62 +2203,44 @@ function buildFixes(d, r) {
       fixes.push({
         impact: 'high',
         title: 'No Q&A content on your Google Business Profile',
-        why: 'AI systems pull from the Q&A section of Google Business Profiles when answering local search queries. Empty Q&A means missed recommendations.',
+        why: 'AI systems pull from the Q&A section when answering local search queries.',
         deliverableType: 'Google Business Profile Q&A',
         deliverable: faqText,
         isCode: false,
-        where: 'Go to your Google Business Profile. In the Q&A section, click Ask a Question and post each question yourself. Then answer each one using the answers provided.',
-        prompt: 'I need to add Q&A to my Google Business Profile. I will post the questions myself and answer them. Please format these as clear, professional answers under 1000 characters each: [paste Q&A above].'
+        where: 'In your Google Business Profile Q&A section, post each question yourself then answer using the answers provided.',
+        prompt: 'Format these as professional answers under 1000 characters each for my Google Business Profile Q&A: [paste above].'
       });
     }
 
     if (r.directory) {
       fixes.push({
         impact: 'medium',
-        title: 'Your directory listings are inconsistent or missing',
-        why: 'Consistent business information across directories is a key credibility signal AI systems use to verify and recommend businesses.',
+        title: 'Inconsistent or missing directory listings',
+        why: 'Consistent business information across directories is a key AI credibility signal.',
         deliverableType: 'Directory Listing Description',
         deliverable: r.directory,
         isCode: false,
-        where: 'Use this exact description on Yelp, Apple Maps, Bing Places, and any other directory you are listed on.',
-        prompt: 'I need to update my directory listings with consistent information. Here is the description to use everywhere: [paste description above]. What directories should I prioritize for a ' + d.industry + ' business?'
+        where: 'Use this exact description on Yelp, Apple Maps, Bing Places, and every directory you appear in.',
+        prompt: 'I need to update my directory listings with consistent information. Here is the description: [paste above]. Which directories should I prioritize for a ' + d.industry + ' business?'
       });
     }
 
-    // One-page website package
     if (r.pageHeadline) {
-      const pageContent = 'HEADLINE:\n' + r.pageHeadline + '\n\nDESCRIPTION:\n' + (r.pageDesc || '') + '\n\nSERVICES:\n' + (r.pageServices || '') + '\n\nFAQ:\n' + (r.pageFaqs || []).map(f => 'Q: ' + f.q + '\nA: ' + f.a).join('\n\n');
+      const pageContent = 'HEADLINE:\n' + r.pageHeadline +
+        '\n\nDESCRIPTION:\n' + (r.pageDesc || '') +
+        '\n\nSERVICES:\n' + (r.pageServices || '') +
+        '\n\nFAQ:\n' + (r.pageFaqs || []).map(f => 'Q: ' + f.q + '\nA: ' + f.a).join('\n\n');
       fixes.push({
         impact: 'high',
         title: 'No website means AI systems cannot fully recommend you',
-        why: 'A single public page dramatically improves your AI visibility. AI systems can crawl it, cite it, and use it to recommend you for specific searches.',
+        why: 'A single public page dramatically improves your AI visibility. AI systems can crawl it, cite it, and recommend you for specific searches.',
         deliverableType: 'One-Page Website Copy Package',
         deliverable: pageContent,
         isCode: false,
-        where: 'Use this content to build a one-page website on Carrd, Google Sites, or any free website builder. The page just needs to be publicly accessible.',
-        prompt: 'I need to build a simple one-page website for my business. Here is all the content I need on the page: [paste content above]. Please write the complete HTML for a clean, professional one-page site using this content. Make it mobile-friendly and include basic meta tags for SEO.'
+        where: 'Use this content to build a one-page website on Carrd, Google Sites, or any free website builder.',
+        prompt: 'Build a complete one-page website for my business using this content: [paste above]. Write the full HTML for a clean, professional, mobile-friendly page with basic meta tags for SEO.'
       });
     }
-  }
-
-  // Add listings consistency fix if available
-  if (isA && r.listingsConsistency) {
-    fixes.push({
-      impact: 'medium',
-      title: 'Inconsistent business information across public platforms',
-      why: r.listingsConsistency,
-      deliverableType: 'Consistent Business Description',
-      deliverable: r.bizDesc || '',
-      isCode: false,
-      where: 'Use this exact description on your website, Google Business Profile, Yelp, LinkedIn, and every directory you appear in. Consistency is a key AI credibility signal.',
-      prompt: 'I need to update my business description to be consistent everywhere. Here is the description to use on all platforms: [paste description above]. Which platforms should I prioritize updating first for maximum AI visibility?'
-    });
-  }
-
-  // Add sources analyzed card if multiple sources were found
-  if (isA && r.sourcesAnalyzed && r.sourcesAnalyzed.length > 1) {
-    const sourceList = r.sourcesAnalyzed.join(', ');
-    console.log('Sources analyzed:', sourceList);
   }
 
   return fixes;
@@ -1844,7 +2248,7 @@ function buildFixes(d, r) {
 
 function buildFixCard(fix, index) {
   const impactClass = fix.impact + '-impact';
-  const deliverableId = 'fix-del-' + index;
+  const delId   = 'fix-del-' + index;
   const promptId = 'fix-prompt-' + index;
 
   return `
@@ -1857,35 +2261,27 @@ function buildFixCard(fix, index) {
         </div>
         <button class="fix-apply-btn" onclick="markFixDone(${index})" id="fix-btn-${index}">Mark done</button>
       </div>
-
       <div class="fix-card-body">
-
         <div class="fix-deliverable">
           <div class="fix-deliverable-label">
             <span class="fix-deliverable-type">${esc(fix.deliverableType)}</span>
-            <button class="fix-copy-btn" onclick="copyFixContent('${deliverableId}', this)">Copy</button>
+            <button class="fix-copy-btn" onclick="copyFixContent('${delId}', this)">Copy</button>
           </div>
-          <div class="fix-deliverable-content ${fix.isCode ? 'is-code' : ''}" id="${deliverableId}">${esc(fix.deliverable)}</div>
+          <div class="fix-deliverable-content ${fix.isCode ? 'is-code' : ''}" id="${delId}">${esc(fix.deliverable)}</div>
         </div>
-
         <div class="fix-where">
           <span class="fix-where-arrow">-></span>
           <span class="fix-where-text">${esc(fix.where)}</span>
         </div>
-
         <div class="fix-prompt">
           <div class="fix-prompt-header">
-            <span class="fix-prompt-label">AI Prompt - Paste into ChatGPT or Claude</span>
+            <span class="fix-prompt-label">AI Prompt -- Paste into ChatGPT or Claude</span>
             <button class="fix-copy-btn" onclick="copyFixContent('${promptId}', this)">Copy</button>
           </div>
           <div class="fix-prompt-content" id="${promptId}">${esc(fix.prompt)}</div>
         </div>
-
       </div>
-
-      <div class="fix-done-bar">
-        <span>Fix applied</span>
-      </div>
+      <div class="fix-done-bar"><span>Fix applied</span></div>
     </div>
   `;
 }
@@ -1898,9 +2294,8 @@ function copyFixContent(id, btn) {
 
 function markFixDone(index) {
   const card = $('fix-card-' + index);
-  const btn  = $('fix-btn-' + index);
-  const num  = $('fix-num-' + index);
-
+  const btn  = $('fix-btn-'  + index);
+  const num  = $('fix-num-'  + index);
   if (card.classList.contains('applied')) {
     card.classList.remove('applied');
     btn.classList.remove('applied');
@@ -1914,28 +2309,14 @@ function markFixDone(index) {
     num.classList.add('done');
     fixesDone++;
   }
-
   $('fixes-done').textContent = fixesDone;
   const pct = fixesTotal > 0 ? (fixesDone / fixesTotal * 100) : 0;
   $('progress-fill').style.width = pct + '%';
-
-  // Update status when all done
   if (fixesDone === fixesTotal && fixesTotal > 0) {
-    $('status-state').textContent = 'You are ready to be found.';
-    $('status-sub').textContent = 'All fixes applied. AI systems can now recommend you.';
+    setText('status-state', 'You are ready to be found.');
+    setText('status-sub',   'All fixes applied. AI systems can now recommend you.');
     $('status-indicator').className = 'status-indicator ready';
   }
-}
-
-
-function setText(id, text) { const el=$(id); if(el) el.textContent=text; }
-function esc(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
 }
 
 // == PRODUCT MODE ==
