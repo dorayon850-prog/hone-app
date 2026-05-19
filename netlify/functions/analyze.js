@@ -22,234 +22,334 @@ exports.handler = async (event) => {
   const { analysisData: data } = body;
   if (!data) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing analysisData' }) };
 
-  const FC_HEADERS = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + FC_KEY };
-  const ANT_HEADERS = { 'Content-Type': 'application/json', 'x-api-key': ANT_KEY, 'anthropic-version': '2023-06-01' };
+  const FC_H  = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + FC_KEY };
+  const ANT_H = { 'Content-Type': 'application/json', 'x-api-key': ANT_KEY, 'anthropic-version': '2023-06-01' };
 
+  // Timeout wrapper
+  const withTimeout = (promise, ms) =>
+    Promise.race([promise, new Promise(r => setTimeout(() => r(null), ms))]);
+
+  // Scrape one page
   async function scrapePage(url) {
     try {
-      const res = await fetch('https://api.firecrawl.dev/v2/scrape', {
-        method: 'POST', headers: FC_HEADERS,
+      const res = await withTimeout(fetch('https://api.firecrawl.dev/v2/scrape', {
+        method: 'POST', headers: FC_H,
         body: JSON.stringify({ url, formats: ['markdown'] }),
-      });
+      }), 6000);
+      if (!res) return '';
       const d = await res.json();
-      const md = (d.data && d.data.markdown) ? d.data.markdown : '';
-      return md.slice(0, 3000);
+      return ((d.data && d.data.markdown) ? d.data.markdown : '').slice(0, 2500);
     } catch(e) { return ''; }
   }
 
-  async function findListings(query) {
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers: ANT_HEADERS,
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 800,
-          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-          messages: [{ role: 'user', content: 'Find these for: ' + query + '. Return ONLY JSON: {"website":"","googleBusiness":"","yelp":"","linkedin":""}. Use empty string if not found.' }],
-        }),
-      });
-      const d = await res.json();
-      const text = (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-      const match = text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]);
-    } catch(e) {}
-    return { website: '', googleBusiness: '', yelp: '', linkedin: '' };
+  // ── SMART PAGE SELECTION ──
+  // Step 1: broad pattern match (fast, no API call)
+  // Step 2: if not enough found, ask Claude to pick from remaining URLs
+  const PRIORITY_PATTERNS = [
+    // Homepage
+    /^\/$/,
+    // Standard page names
+    /\/about/, /\/about-us/, /\/our-story/,
+    // Products & services
+    /\/product/, /\/products/, /\/services/, /\/service/,
+    /\/store/, /\/shop/, /\/collection/, /\/collections/,
+    /\/offering/, /\/offerings/, /\/work/, /\/portfolio/,
+    /\/menu/, /\/catalog/, /\/catalogue/,
+    // Digital specific
+    /\/course/, /\/courses/, /\/program/, /\/programs/,
+    /\/book/, /\/books/, /\/digital/, /\/download/,
+    /\/tool/, /\/tools/, /\/resource/, /\/resources/,
+    // Common business pages
+    /\/pricing/, /\/price/, /\/packages/, /\/plans/,
+    /\/faq/, /\/faqs/, /\/help/,
+  ];
+
+  function scoreUrl(url, baseUrl) {
+    const path = url.replace(baseUrl, '').toLowerCase().split('?')[0];
+    // Exact homepage
+    if (path === '' || path === '/') return 0;
+    // Pattern match
+    for (let i = 0; i < PRIORITY_PATTERNS.length; i++) {
+      if (PRIORITY_PATTERNS[i].test(path)) return i + 1;
+    }
+    // Deeper product/collection pages (e.g. /collections/mindset, /products/money-reset)
+    if (path.split('/').length === 3 &&
+        /product|collection|service|course|shop/.test(path)) return 5;
+    return 999;
   }
 
-  async function crawlWebsite(url) {
-    const pages = [];
+  // Ask Claude to pick the best pages from a list when pattern matching isn't enough
+  async function claudePickPages(allUrls, baseUrl, industry) {
     try {
-      const mapRes = await fetch('https://api.firecrawl.dev/v1/map', {
-        method: 'POST', headers: FC_HEADERS,
-        body: JSON.stringify({ url, limit: 20 }),
-      });
-      const mapData = await mapRes.json();
-      const allUrls = (mapData.links || []).slice(0, 20);
-      const priority = ['/', '/about', '/products', '/services', '/collection', '/shop'];
-      const scored = allUrls.map(u => {
-        const path = u.replace(url, '').toLowerCase();
-        const score = priority.findIndex(p => path.includes(p));
-        return { u, score: score === -1 ? 99 : score };
-      }).sort((a, b) => a.score - b.score);
-      const toScrape = [url, ...scored.map(s => s.u).filter(u2 => u2 !== url)].slice(0, 5);
-      const results = await Promise.allSettled(toScrape.map(u => scrapePage(u).then(md => ({ url: u, content: md }))));
-      results.forEach(r => { if (r.status === 'fulfilled' && r.value.content) pages.push(r.value); });
+      const urlList = allUrls.slice(0, 30).join('\n');
+      const res = await withTimeout(
+        fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST', headers: ANT_H,
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 300,
+            messages: [{ role: 'user', content:
+              `A ${industry} business has these URLs:\n${urlList}\n\nPick the 3 most likely to contain product, service, or offering information (not homepage, not blog posts, not policy pages). Return ONLY a JSON array of the full URLs: ["url1","url2","url3"]`
+            }],
+          }),
+        }).then(r => r.json()),
+        5000
+      );
+      if (!res) return [];
+      const text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      const match = text.match(/\[[\s\S]*\]/);
+      return match ? JSON.parse(match[0]) : [];
+    } catch(e) { return []; }
+  }
+
+  // Crawl website with smart page selection
+  async function crawlWebsite(url, industry) {
+    const pages = [];
+    let selectedUrls = [url]; // always include homepage
+
+    try {
+      const mapRes = await withTimeout(fetch('https://api.firecrawl.dev/v1/map', {
+        method: 'POST', headers: FC_H,
+        body: JSON.stringify({ url, limit: 30 }),
+      }), 5000);
+
+      if (mapRes) {
+        const mapData = await mapRes.json();
+        const allUrls = (mapData.links || []).filter(u => u !== url);
+
+        // Step 1: Pattern-based scoring
+        const scored = allUrls.map(u => ({ u, score: scoreUrl(u, url) }))
+          .sort((a, b) => a.score - b.score);
+
+        const patternMatched = scored.filter(s => s.score < 999).map(s => s.u).slice(0, 3);
+        const unmatched = scored.filter(s => s.score === 999).map(s => s.u);
+
+        if (patternMatched.length >= 2) {
+          // Enough pattern matches — use them
+          selectedUrls = [url, ...patternMatched].slice(0, 4);
+        } else {
+          // Step 2: Not enough pattern matches — ask Claude to pick
+          const claudePicks = unmatched.length > 0
+            ? await claudePickPages(unmatched, url, industry)
+            : [];
+          selectedUrls = [url, ...patternMatched, ...claudePicks]
+            .filter((u, i, arr) => arr.indexOf(u) === i) // dedupe
+            .slice(0, 4);
+        }
+      }
     } catch(e) {
-      const md = await scrapePage(url);
-      if (md) pages.push({ url, content: md });
+      // Map failed — homepage only
     }
+
+    // Scrape selected pages in parallel
+    const results = await Promise.all(
+      selectedUrls.map(u => scrapePage(u).then(md => ({ url: u, content: md })))
+    );
+    results.forEach(r => { if (r.content) pages.push(r); });
     return pages;
   }
 
-  async function readViaClaude(url, platform) {
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers: ANT_HEADERS,
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 600,
-          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-          messages: [{ role: 'user', content: 'Visit this ' + platform + ' page and extract: business name, bio/description, what they sell, who their audience is, and any contact info. URL: ' + url + '. Return plain text only.' }],
-        }),
-      });
-      const d = await res.json();
-      return (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('').slice(0, 2000);
-    } catch(e) { return ''; }
+  // Find listings and crawl in parallel
+  async function findListingsAndCrawl(url, industry) {
+    const [pages, listingsResult] = await Promise.all([
+      crawlWebsite(url, industry),
+      withTimeout(
+        fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST', headers: ANT_H,
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514', max_tokens: 600,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+            messages: [{ role: 'user',
+              content: 'Find public listings for: ' +
+                url.replace(/https?:\/\/(www\.)?/,'').split('/')[0] + ' ' + industry +
+                '. Return ONLY JSON: {"googleBusiness":"","yelp":"","linkedin":""}. Empty string if not found.' }],
+          }),
+        }).then(r => r.json()),
+        8000
+      )
+    ]);
+
+    let listings = { googleBusiness: '', yelp: '', linkedin: '' };
+    if (listingsResult) {
+      try {
+        const text = (listingsResult.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+        const match = text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+        if (match) listings = JSON.parse(match[0]);
+      } catch(e) {}
+    }
+
+    // Scrape up to 2 listings in parallel
+    const listingUrls = [
+      listings.googleBusiness && { source: 'GOOGLE BUSINESS PROFILE', url: listings.googleBusiness },
+      listings.yelp && { source: 'YELP LISTING', url: listings.yelp },
+    ].filter(Boolean).slice(0, 2);
+
+    const listingPages = await Promise.all(
+      listingUrls.map(l => scrapePage(l.url).then(md => ({ ...l, content: md })))
+    );
+
+    return { pages, listings, listingPages: listingPages.filter(l => l.content) };
   }
 
+  // Find business by name
+  async function findBusinessByName(query, industry) {
+    try {
+      const res = await withTimeout(
+        fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST', headers: ANT_H,
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514', max_tokens: 600,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+            messages: [{ role: 'user',
+              content: 'Find for: ' + query + ' ' + industry +
+                '. Return ONLY JSON: {"website":"","googleBusiness":"","yelp":""}. Empty if not found.' }],
+          }),
+        }).then(r => r.json()),
+        8000
+      );
+      if (!res) return { website: '', googleBusiness: '', yelp: '' };
+      const text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      const match = text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+      return match ? JSON.parse(match[0]) : { website: '', googleBusiness: '', yelp: '' };
+    } catch(e) { return { website: '', googleBusiness: '', yelp: '' }; }
+  }
+
+  // Read social platform
+  async function readSocial(platform, url) {
+    const DIRECT = ['youtube','facebook','linkedin','yelp','google','other'];
+    if (DIRECT.includes(platform)) {
+      const content = await scrapePage(url);
+      return { source: platform.toUpperCase(), url, content };
+    }
+    try {
+      const res = await withTimeout(
+        fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST', headers: ANT_H,
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514', max_tokens: 400,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+            messages: [{ role: 'user',
+              content: 'What does this ' + platform + ' page show? Business name, bio, what they sell, audience. URL: ' + url + '. Brief plain text.' }],
+          }),
+        }).then(r => r.json()),
+        7000
+      );
+      if (!res) return { source: platform.toUpperCase(), url, content: '' };
+      const text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('').slice(0, 1500);
+      return { source: platform.toUpperCase(), url, content: text };
+    } catch(e) { return { source: platform.toUpperCase(), url, content: '' }; }
+  }
+
+  // ── GATHER CONTENT ──
   let allContent = [];
-  let websiteUrl = '';
   let listingsFound = {};
 
   if (data.path === 'AC') {
     if (data.inputType === 'url') {
-      websiteUrl = data.url;
-    } else {
-      const found = await findListings(data.businessQuery + ' ' + data.industry);
-      listingsFound = found;
-      websiteUrl = found.website || '';
-    }
-
-    if (websiteUrl) {
-      const pages = await crawlWebsite(websiteUrl);
+      const { pages, listings, listingPages } = await findListingsAndCrawl(data.url, data.industry);
       pages.forEach(p => allContent.push({ source: 'WEBSITE', url: p.url, content: p.content }));
+      listingPages.forEach(l => allContent.push(l));
+      listingsFound = listings;
+    } else {
+      const found = await findBusinessByName(data.businessQuery, data.industry);
+      listingsFound = found;
+      if (found.website) {
+        const pages = await crawlWebsite(found.website, data.industry);
+        pages.forEach(p => allContent.push({ source: 'WEBSITE', url: p.url, content: p.content }));
+      }
+      const listingUrls = [
+        found.googleBusiness && { source: 'GOOGLE BUSINESS PROFILE', url: found.googleBusiness },
+        found.yelp && { source: 'YELP LISTING', url: found.yelp },
+      ].filter(Boolean);
+      const lp = await Promise.all(listingUrls.map(l => scrapePage(l.url).then(md => ({ ...l, content: md }))));
+      lp.filter(l => l.content).forEach(l => allContent.push(l));
     }
-
-    if (data.inputType === 'url') {
-      const domain = data.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0];
-      listingsFound = await findListings(domain + ' ' + data.industry);
-    }
-
-    const listingSources = [
-      { key: 'googleBusiness', label: 'GOOGLE BUSINESS PROFILE' },
-      { key: 'yelp',           label: 'YELP LISTING' },
-      { key: 'linkedin',       label: 'LINKEDIN PAGE' },
-    ];
-
-    await Promise.allSettled(
-      listingSources.filter(s => listingsFound[s.key]).map(async s => {
-        const md = await scrapePage(listingsFound[s.key]);
-        if (md) allContent.push({ source: s.label, url: listingsFound[s.key], content: md });
-      })
-    );
 
   } else if (data.path === 'B') {
-    const socialLinks = data.socialLinks || {};
-    const DIRECT_PLATFORMS = ['youtube', 'facebook', 'linkedin', 'yelp', 'google', 'other'];
-    const SEARCH_PLATFORMS = ['instagram', 'tiktok'];
-
-    await Promise.allSettled(
-      Object.entries(socialLinks).filter(([,url]) => url).map(async ([platform, url]) => {
-        let content = '';
-        if (DIRECT_PLATFORMS.includes(platform)) {
-          content = await scrapePage(url);
-        } else {
-          content = await readViaClaude(url, platform);
-        }
-        if (content) allContent.push({ source: platform.toUpperCase(), url, content });
-      })
+    const reads = await Promise.all(
+      Object.entries(data.socialLinks || {})
+        .filter(([,u]) => u)
+        .map(([platform, url]) => readSocial(platform, url))
     );
+    reads.filter(r => r.content).forEach(r => allContent.push(r));
   }
 
-  const system = `You are a senior GEO (Generative Engine Optimization) analyst. Your job is to produce a thorough, specific, valuable report that justifies a $150-250 professional fee.
-
-CRITICAL RULES:
-1. Always return AT LEAST 6-8 findings even for well-optimized sites. Advanced sites have advanced opportunities.
-2. Be specific to the actual content found -- never generic.
-3. For well-optimized sites: identify competitive differentiation gaps, query-specific opportunities, and advanced schema types they are missing.
-4. Always find something actionable in: entity clarity, FAQ coverage, positioning specificity, schema completeness, listings consistency, and content gaps.
-5. Return ONLY valid JSON with no markdown, no backticks, no explanation.`;
+  // ── CLAUDE ANALYSIS ──
+  const system = `You are a senior GEO analyst. Produce a thorough report worth $150-250.
+RULES: Return 5-7 findings minimum. Be specific to actual content found. For well-optimized sites find advanced opportunities. Return ONLY valid JSON — no markdown, no backticks.`;
 
   let userMessage = '';
 
   if (data.path === 'AC') {
     const contentBlock = allContent.length > 0
       ? allContent.map(c => '--- ' + c.source + ': ' + c.url + ' ---\n' + c.content).join('\n\n')
-      : 'No content retrieved. Analyze based on industry only and note content could not be retrieved.';
+      : 'No content retrieved.';
+    const inputDesc = data.inputType === 'url' ? 'URL: ' + data.url : 'Search: ' + data.businessQuery;
 
-    const inputDesc = data.inputType === 'url' ? 'URL: ' + data.url : 'Business search: ' + data.businessQuery;
-
-    userMessage = `Analyze this business for GEO readiness. Produce a comprehensive professional report.
-
+    userMessage = `Comprehensive GEO analysis.
 ${inputDesc}
 Industry: ${data.industry}
-Sources found: ${allContent.length}
+Sources: ${allContent.length}
 
-ALL RETRIEVED CONTENT:
+CONTENT:
 ${contentBlock}
 
-Produce a THOROUGH analysis. Even well-optimized sites have GEO opportunities in:
-- Missing schema types (Product, LocalBusiness, Organization, BreadcrumbList)
-- FAQ coverage gaps (queries they should rank for but don't have answers to)
-- Entity disambiguation (are they clearly differentiated from competitors?)
-- Listing consistency (do all surfaces use identical language?)
-- Content-query mismatch (do they have content matching how people actually ask AI?)
-- Missing llms.txt
-- Social proof signals AI systems can read
-
-Return this exact JSON:
+Return this JSON:
 {
-  "score": <0-100: be honest, most sites score 25-60, only truly exceptional GEO earns 70+>,
-  "aiView": "<2-3 sentences: what an AI system ACTUALLY says when asked to recommend this type of business -- based on real content found. If content is thin, say so honestly>",
-  "strengths": "<2-3 sentences: specific things working in their favor for GEO -- be precise>",
-  "weaknesses": "<2-3 sentences: the most important gaps holding them back -- be specific>",
-  "entity": "<complete entity statement using real business details: 1 paragraph>",
-  "bizDesc": "<AI-optimized business description 100-150 words using actual products/services found>",
-  "faqs": [
-    {"q": "<conversational question people ask AI when looking for this business>", "a": "<specific answer using real details>"}
-  ],
-  "positioning": ["<statement targeting a specific high-intent AI query>", "<statement 2>", "<statement 3>"],
-  "schemaNote": "<SPECIFIC platform instruction -- if Shopify detected say exactly where in Shopify. If WordPress say exactly where. Be specific>",
-  "listingsConsistency": "<specific observation: what is consistent and what is inconsistent across the surfaces found>",
+  "score": <0-100: no schema=max45, basic schema=max65, full GEO=70+>,
+  "aiView": "<what AI says when asked to recommend this business — specific to real content>",
+  "strengths": "<2-3 specific GEO strengths found>",
+  "weaknesses": "<2-3 specific gaps found>",
+  "entity": "<complete entity statement: category, location, differentiator>",
+  "bizDesc": "<AI-optimized 100-150 word description using actual products/services found>",
+  "faqs": [{"q":"<conversational AI query>","a":"<specific answer using real details>"}],
+  "positioning": ["<targets specific query>","<statement 2>","<statement 3>"],
+  "schemaNote": "<SPECIFIC platform instruction — if Shopify: Online Store > Themes > Edit Code > theme.liquid. If WordPress: header.php or Yoast plugin>",
+  "listingsConsistency": "<what was found and whether descriptions are consistent>",
   "detectedProduct": "<main product or service name>",
-  "detectedProductDesc": "<what it does in one sentence>",
+  "detectedProductDesc": "<one sentence>",
   "detectedCustomer": "<who it is for>",
-  "detectedPrice": "<price if found, empty string if not>",
-  "sourcesAnalyzed": <array of source labels found>
+  "detectedPrice": "<price if found or empty>",
+  "sourcesAnalyzed": <array of source labels>
 }
-
-REQUIREMENTS:
-- 5 FAQ pairs minimum -- write questions the way people ACTUALLY ask AI tools
-- 3 positioning statements -- each must target a different specific query
-- Score honestly: if the site has decent copy but no schema, that is a 35-45
-- The entity statement must be specific enough that an AI system reading it would immediately know the category, location, and differentiator`;
+5 FAQs minimum. 3 positioning statements. Score honestly.`;
 
   } else {
     const socialBlock = allContent.length > 0
       ? '\n\nSOCIAL CONTENT:\n' + allContent.map(c => '--- ' + c.source + ' ---\n' + c.content).join('\n\n')
       : '';
 
-    userMessage = `Analyze GEO readiness for a business without a website.
-
+    userMessage = `GEO analysis — no website.
 Business: ${data.bizName}
 Location: ${data.location}
 Industry: ${data.industry}
-Description: ${data.bizDesc}
+Does: ${data.bizDesc}
 Bio: ${data.currentBio || 'None'}${socialBlock}
 
-Return this exact JSON -- use real details from social content where available:
+Return JSON:
 {
-  "score": <0-40: no website means automatic ceiling>,
-  "aiView": "<what AI says when asked to recommend this business -- likely nothing specific if they have no website>",
-  "strengths": "<what is working in their favor>",
+  "score": <0-40>,
+  "aiView": "<what AI finds about this business>",
+  "strengths": "<what works>",
   "weaknesses": "<primary gaps>",
-  "gbpDesc": "<optimized Google Business Profile description max 750 characters -- use real service details>",
-  "gbpFaqs": [{"q": "<question>", "a": "<specific answer>"}],
-  "directory": "<100-150 word description for all directories>",
-  "pageHeadline": "<compelling website headline>",
+  "gbpDesc": "<750 char GBP description>",
+  "gbpFaqs": [{"q":"","a":""}],
+  "directory": "<100-150 word directory description>",
+  "pageHeadline": "<website headline>",
   "pageDesc": "<2 paragraphs>",
-  "pageServices": "<3-4 specific services with descriptions>",
-  "pageFaqs": [{"q": "<question>", "a": "<answer>"}],
-  "listingsConsistency": "<what was found across platforms and whether it is consistent>"
+  "pageServices": "<3-4 services>",
+  "pageFaqs": [{"q":"","a":""}],
+  "listingsConsistency": "<what was found>"
 }
-
 3 GBP FAQs, 3 page FAQs minimum.`;
   }
 
   try {
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: ANT_HEADERS,
+      method: 'POST', headers: ANT_H,
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 3000,
+        max_tokens: 2500,
         system,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -264,13 +364,13 @@ Return this exact JSON -- use real details from social content where available:
     const clean = text.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
 
     if (!clean || clean[0] !== '{') {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Non-JSON response: ' + clean.slice(0,100) }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Non-JSON: ' + clean.slice(0,100) }) };
     }
 
     const result = JSON.parse(clean);
-    result.pageCount    = allContent.length;
+    result.pageCount     = allContent.length;
     result.listingsFound = listingsFound;
-    result.sourcesRead  = allContent.map(c => ({ source: c.source }));
+    result.sourcesRead   = allContent.map(c => ({ source: c.source }));
 
     return { statusCode: 200, headers, body: JSON.stringify({ result }) };
 
