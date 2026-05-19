@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/crawl.js": { "maxDuration": 55 },
+    "api/analyze.js": { "maxDuration": 55 }
+  }
+}
