@@ -1525,6 +1525,42 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
         <div id="out-positioning"></div>
       </div>
 
+      <div class="content-row" id="content-competitor-gap" style="display:none;">
+        <div class="content-row-label">Competitor Gap</div>
+        <div class="content-row-hint">What your top competitor has for AI visibility that you are missing.</div>
+        <div class="geo-block">
+          <div class="geo-block-text" id="out-competitor-gap"></div>
+          <button class="geo-copy-btn" data-target="out-competitor-gap">Copy</button>
+        </div>
+      </div>
+
+      <div class="content-row" id="content-query-gap" style="display:none;">
+        <div class="content-row-label">Query Gap Analysis</div>
+        <div class="content-row-hint">Specific AI search queries you should be capturing but are not.</div>
+        <div class="geo-block">
+          <div class="geo-block-text" id="out-query-gap"></div>
+          <button class="geo-copy-btn" data-target="out-query-gap">Copy</button>
+        </div>
+      </div>
+
+      <div class="content-row" id="content-llms" style="display:none;">
+        <div class="content-row-label">llms.txt File</div>
+        <div class="content-row-hint">Complete ready-to-host file. Create llms.txt at your domain root so it is accessible at yourdomain.com/llms.txt</div>
+        <div class="geo-block geo-block-code">
+          <div class="geo-block-text geo-block-code-text" id="out-llms"></div>
+          <button class="geo-copy-btn" data-target="out-llms">Copy</button>
+        </div>
+      </div>
+
+      <div class="content-row" id="content-org-schema" style="display:none;">
+        <div class="content-row-label">Organization Schema</div>
+        <div class="content-row-hint" id="out-org-schema-note">Add to your homepage head section alongside the FAQ schema.</div>
+        <div class="geo-block geo-block-code">
+          <div class="geo-block-text geo-block-code-text" id="out-org-schema"></div>
+          <button class="geo-copy-btn" data-target="out-org-schema">Copy</button>
+        </div>
+      </div>
+
       <div class="content-row">
         <div class="content-row-label">FAQ Schema Code</div>
         <div class="content-row-hint" id="out-schema-note">Add this to the head section of your website. This is the single highest-impact GEO change you can make.</div>
@@ -1800,12 +1836,12 @@ function handleAnalyze() {
 
 // == TWO-STEP ANALYSIS: CRAWL THEN ANALYZE ==
 async function analyzeWithClaude(data) {
-  // Step 1 — Crawl (up to 24s)
-  let crawlResult = { allContent: [], listingsFound: {}, pageCount: 0 };
+  // Step 1 — Crawl (up to 45s on Pro)
+  let crawlResult = { allContent: [], listingsFound: {}, competitors: [], queryGaps: [], pageCount: 0 };
 
   if (data.path === 'AC') {
     const crawlController = new AbortController();
-    const crawlTimer = setTimeout(() => crawlController.abort(), 24000);
+    const crawlTimer = setTimeout(() => crawlController.abort(), 50000);
     try {
       const crawlRes = await fetch('/api/crawl', {
         method: 'POST',
@@ -1824,24 +1860,22 @@ async function analyzeWithClaude(data) {
       }
     } catch(e) {
       clearTimeout(crawlTimer);
-      // Continue to analysis even if crawl fails — Claude will note limitations
     }
-  } else if (data.path === 'B') {
-    // Path B social reading handled inside analyze function
-    crawlResult = { allContent: [], listingsFound: {}, pageCount: 0 };
   }
 
-  // Step 2 — Analyze (up to 22s)
+  // Step 2 — Analyze (up to 50s on Pro)
   const analyzeController = new AbortController();
-  const analyzeTimer = setTimeout(() => analyzeController.abort(), 22000);
+  const analyzeTimer = setTimeout(() => analyzeController.abort(), 50000);
   try {
     const analyzeRes = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        analysisData: data,
-        allContent:   crawlResult.allContent   || [],
+        analysisData:  data,
+        allContent:    crawlResult.allContent    || [],
         listingsFound: crawlResult.listingsFound || {},
+        competitors:   crawlResult.competitors   || [],
+        queryGaps:     crawlResult.queryGaps     || [],
       }),
       signal: analyzeController.signal,
     });
@@ -2045,6 +2079,18 @@ function populateResults() {
   addCard('Public Listings Found', listings.length > 0 ? listings.length + ' listings' : 'None found',
     listings.length > 0 ? listings.join(', ') : 'Google Business Profile, Yelp, LinkedIn not found');
 
+  // Show competitor info if found
+  if (r.competitors && r.competitors.length > 0) {
+    addCard('Competitors Analyzed', r.competitors.length + ' identified',
+      r.competitors.map(c => c.name || '').filter(Boolean).join(', '));
+  }
+
+  // Show query gaps count if found
+  if (r.queryGaps && r.queryGaps.length > 0) {
+    addCard('Query Gaps Found', r.queryGaps.length + ' opportunities',
+      'Specific AI search queries you should be capturing');
+  }
+
   // Listings consistency
   if (r.listingsConsistency) {
     const cb = $('consistency-block');
@@ -2089,6 +2135,34 @@ function populateResults() {
   }
 
   if (r.schemaNote) setText('out-schema-note', r.schemaNote);
+
+  // Competitor gap
+  if (r.competitorGap) {
+    setText('out-competitor-gap', r.competitorGap);
+    const el = $('content-competitor-gap');
+    if (el) el.style.display = 'block';
+  }
+
+  // Query gap analysis
+  if (r.queryGapAnalysis) {
+    setText('out-query-gap', r.queryGapAnalysis);
+    const el = $('content-query-gap');
+    if (el) el.style.display = 'block';
+  }
+
+  // llms.txt
+  if (r.llmsTxtContent) {
+    setText('out-llms', r.llmsTxtContent);
+    const el = $('content-llms');
+    if (el) el.style.display = 'block';
+  }
+
+  // Organization schema
+  if (r.schemaOrganization) {
+    setText('out-org-schema', r.schemaOrganization);
+    const el = $('content-org-schema');
+    if (el) el.style.display = 'block';
+  }
 
   // -- TAB 4: FIX QUEUE --
   const fixes = buildFixes(d, r);
