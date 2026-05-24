@@ -1217,6 +1217,81 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
   line-height: 1.65;
 }
 
+/* == COMPETITOR INTEL == */
+.competitor-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  transition: border-color 0.18s;
+}
+
+.competitor-card:hover { border-color: var(--border-hi); }
+
+.competitor-rank {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--purple-dim);
+  border: 1px solid var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--purple-light);
+  flex-shrink: 0;
+}
+
+.competitor-info { flex: 1; }
+
+.competitor-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.competitor-website {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.competitor-strength {
+  font-size: 0.8rem;
+  color: var(--text-sec);
+  line-height: 1.55;
+}
+
+.competitor-strength-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--purple-light);
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 0.2rem;
+}
+
+.query-gap-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: 8px;
+  padding: 0.875rem 1.1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-sec);
+  line-height: 1.6;
+  font-style: italic;
+}
+
 /* == UTILITY == */
 
 .field-hint {
@@ -1459,6 +1534,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
     <button class="report-tab active" data-rtab="snapshot">AI Snapshot</button>
     <button class="report-tab" data-rtab="analyzed">What Was Analyzed</button>
     <button class="report-tab" data-rtab="content">Your GEO Content</button>
+    <button class="report-tab" data-rtab="competitors">Competitor Intel</button>
     <button class="report-tab" data-rtab="fixes">Your Fix Queue</button>
   </nav>
 
@@ -1580,6 +1656,54 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- TAB: Competitor Intel -->
+  <div class="report-panel" id="rtab-competitors">
+    <div class="panel-inner">
+
+      <div id="competitor-empty" style="padding:1.5rem 0;color:var(--text-sec);font-size:0.88rem;font-family:'DM Mono',monospace;">
+        Competitor intelligence is generated for Path A analyses with sufficient site content.
+      </div>
+
+      <div id="competitor-content" style="display:none;">
+
+        <!-- Competitors found -->
+        <div class="content-row">
+          <div class="content-row-label">Competitors Identified</div>
+          <div class="content-row-hint">AI searched for the top competitors in your space and analyzed their GEO advantages.</div>
+          <div id="out-competitor-cards"></div>
+        </div>
+
+        <!-- What they have that you don't -->
+        <div class="content-row" id="comp-gap-row" style="display:none;">
+          <div class="content-row-label">What Your Competitor Has That You Don't</div>
+          <div class="content-row-hint">The specific GEO signals your top competitor is using that you are not — and what that means for recommendations.</div>
+          <div class="geo-block">
+            <div class="geo-block-text" id="out-comp-gap-detail"></div>
+            <button class="geo-copy-btn" data-target="out-comp-gap-detail">Copy</button>
+          </div>
+        </div>
+
+        <!-- Query gaps they are winning -->
+        <div class="content-row" id="comp-query-row" style="display:none;">
+          <div class="content-row-label">Queries Your Competitors Are Winning</div>
+          <div class="content-row-hint">Specific questions people ask AI systems that your competitors are capturing and you are not. These are the searches you should be showing up in.</div>
+          <div id="out-query-gap-list"></div>
+        </div>
+
+        <!-- How to close the gap -->
+        <div class="content-row" id="comp-close-row" style="display:none;">
+          <div class="content-row-label">How to Close the Gap</div>
+          <div class="content-row-hint">The specific content and positioning changes that would move you from invisible to recommended for these queries.</div>
+          <div class="geo-block">
+            <div class="geo-block-text" id="out-gap-close"></div>
+            <button class="geo-copy-btn" data-target="out-gap-close">Copy</button>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -2089,11 +2213,14 @@ function populateResults() {
   addCard('Public Listings Found', listings.length > 0 ? listings.length + ' listings' : 'None found',
     listings.length > 0 ? listings.join(', ') : 'Google Business Profile, Yelp, LinkedIn not found');
 
-  // Show competitor info if found
+  // Show competitor info in analyzed tab
   if (r.competitors && r.competitors.length > 0) {
     addCard('Competitors Analyzed', r.competitors.length + ' identified',
       r.competitors.map(c => c.name || '').filter(Boolean).join(', '));
   }
+
+  // Populate Competitor Intel tab
+  populateCompetitorTab(r);
 
   // Show query gaps count if found
   if (r.queryGaps && r.queryGaps.length > 0) {
