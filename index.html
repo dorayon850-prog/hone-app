@@ -1488,6 +1488,16 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
         <div class="consistency-label">Listings Consistency Check</div>
         <div class="consistency-text" id="out-consistency"></div>
       </div>
+
+      <div class="consistency-block" id="already-implemented-block" style="display:none;background:var(--green-dim);border-color:var(--green);">
+        <div class="consistency-label" style="color:var(--green);">Already Implemented</div>
+        <div class="consistency-text" id="out-already-implemented"></div>
+      </div>
+
+      <div class="consistency-block" id="completeness-note-block" style="display:none;background:var(--blue-dim);border-color:var(--blue);">
+        <div class="consistency-label" style="color:var(--blue);">Assessment Note</div>
+        <div class="consistency-text" id="out-completeness-note"></div>
+      </div>
     </div>
   </div>
 
@@ -2098,6 +2108,24 @@ function populateResults() {
     setText('out-consistency', r.listingsConsistency);
   }
 
+  // Show what is already implemented
+  if (r.alreadyImplemented && r.alreadyImplemented.length > 0) {
+    const existingEl = $('already-implemented-block');
+    if (existingEl) {
+      existingEl.style.display = 'block';
+      $('out-already-implemented').textContent = r.alreadyImplemented.join(', ');
+    }
+  }
+
+  // Show completeness note if present
+  if (r.completenessNote) {
+    const noteEl = $('completeness-note-block');
+    if (noteEl) {
+      noteEl.style.display = 'block';
+      setText('out-completeness-note', r.completenessNote);
+    }
+  }
+
   // -- TAB 3: GEO CONTENT --
   setText('out-entity',   r.entity   || '');
   setText('out-biz-desc', r.bizDesc  || '');
@@ -2189,21 +2217,27 @@ function buildFixes(d, r) {
     ? (d.url ? d.url.replace(/https?:\/\/(www\.)?/,'').split('/')[0] : d.businessQuery)
     : d.bizName;
 
+  // What is already correctly implemented -- skip fix cards for these
+  const done = new Set((r.alreadyImplemented || []).map(s => s.toLowerCase()));
+  const skip = key => done.has(key.toLowerCase());
+
   if (isAC) {
-    if (r.entity) {
+    // Fix 1: Entity statement -- skip if already implemented
+    if (r.entity && !skip('entitystatement') && !skip('entity')) {
       fixes.push({
         impact: 'high',
         title: 'AI systems cannot clearly identify what category your business belongs to',
-        why: 'Without a clear entity definition AI systems skip you when they cannot confidently match you to a search.',
+        why: 'Without a clear entity definition AI systems skip you when they cannot confidently match you to a search query.',
         deliverableType: 'Entity Statement',
         deliverable: r.entity,
         isCode: false,
         where: 'Paste this as the first paragraph of your About page and your Google Business Profile description.',
-        prompt: 'I need to add the following text as the opening paragraph of my About page. Here is the text: "' + (r.entity || '').slice(0,100) + '..." Please add it naturally to my existing About page content without removing anything important.'
+        prompt: 'I need to add the following text as the opening paragraph of my About page. Here is the text: "' + (r.entity || '').slice(0,120) + '..." Please add it naturally to my existing content without removing anything important.'
       });
     }
 
-    if (r.bizDesc) {
+    // Fix 2: Business description -- skip if already implemented
+    if (r.bizDesc && !skip('bizdesc') && !skip('businessdescription') && !skip('aidescription')) {
       fixes.push({
         impact: 'high',
         title: 'Your business description is not written for AI recommendation systems',
@@ -2212,11 +2246,12 @@ function buildFixes(d, r) {
         deliverable: r.bizDesc,
         isCode: false,
         where: 'Replace your current homepage intro or hero description with this text.',
-        prompt: 'Replace my current homepage hero text with the following description. Keep my existing headline but replace the body text beneath it: "' + (r.bizDesc || '').slice(0,100) + '..."'
+        prompt: 'Replace my current homepage hero text with the following description. Keep my existing headline but replace the body text beneath it: [paste description above].'
       });
     }
 
-    if (r.faqs && r.faqs.length) {
+    // Fix 3: FAQ Schema -- skip if already implemented
+    if (r.faqs && r.faqs.length && !skip('faqschema') && !skip('schema') && !skip('faqpage')) {
       const schemaObj = {
         "@context": "https://schema.org",
         "@type": "FAQPage",
@@ -2231,20 +2266,23 @@ function buildFixes(d, r) {
       const placement = r.schemaNote || 'Add this to the head section of your homepage.';
       fixes.push({
         impact: 'high',
-        title: 'No FAQ schema -- AI systems cannot match questions to your content',
-        why: 'FAQ schema is the highest-impact GEO signal available. AI systems pull directly from it when answering questions about businesses like yours.',
+        title: 'No FAQ schema found — AI systems cannot match questions to your content',
+        why: 'FAQ schema is the highest-impact GEO signal available. AI systems pull directly from it when answering questions.',
         deliverableType: 'FAQ Schema Code',
         deliverable: schemaCode,
         isCode: true,
         where: placement,
-        prompt: 'Add the following FAQ schema code to the head section of my homepage. ' + placement + ' Here is the code: [paste the schema code above]. Give me step-by-step instructions for my platform.'
+        prompt: 'Add the following FAQ schema to the head section of my homepage. ' + placement + ' Here is the code: [paste schema above]. Give me exact step-by-step instructions for my platform.'
       });
+    }
 
+    // Fix 4: FAQ content on page -- skip if already exists
+    if (r.faqs && r.faqs.length && !skip('faqcontent') && !skip('faqsection')) {
       const faqText = r.faqs.map(f => 'Q: ' + f.q + '\nA: ' + f.a).join('\n\n');
       fixes.push({
         impact: 'medium',
         title: 'No FAQ section on your website',
-        why: 'AI systems match user questions to FAQ content on your site. Without it a competitor with FAQs gets recommended instead.',
+        why: 'AI systems match user questions to FAQ content. Without it a competitor with FAQs gets recommended instead.',
         deliverableType: 'FAQ Content',
         deliverable: faqText,
         isCode: false,
@@ -2253,59 +2291,148 @@ function buildFixes(d, r) {
       });
     }
 
-    if (r.positioning && r.positioning.length) {
+    // Fix 5: Organization schema -- only if not already implemented
+    if (r.schemaOrganization && !skip('organizationschema') && !skip('organization')) {
+      fixes.push({
+        impact: 'high',
+        title: 'No Organization schema — AI systems cannot verify your business identity',
+        why: 'Organization schema tells AI systems definitively who you are, where you are, and how to contact you. Without it they cannot cite you with confidence.',
+        deliverableType: 'Organization Schema Code',
+        deliverable: r.schemaOrganization,
+        isCode: true,
+        where: (r.schemaNote || 'Add to the head section of your homepage.') + ' Add alongside any other schema already present.',
+        prompt: 'Add the following Organization schema to my website. ' + (r.schemaNote || '') + ' Here is the code: [paste above]. How do I add this alongside existing schema without conflicts?'
+      });
+    }
+
+    // Fix 6: LocalBusiness schema -- only if applicable and missing
+    if (r.schemaLocalBusiness && !skip('localbusinessschema') && !skip('localbusiness')) {
+      fixes.push({
+        impact: 'high',
+        title: 'No LocalBusiness schema — AI systems cannot confirm your location and service area',
+        why: 'For location-based recommendations, LocalBusiness schema is the primary signal AI systems use to verify you serve a specific area.',
+        deliverableType: 'LocalBusiness Schema Code',
+        deliverable: r.schemaLocalBusiness,
+        isCode: true,
+        where: r.schemaNote || 'Add to the head section of your homepage.',
+        prompt: 'Add the following LocalBusiness schema to my website. Here is the code: [paste above]. ' + (r.schemaNote || '')
+      });
+    }
+
+    // Fix 7: Product schema -- only if applicable and missing
+    if (r.schemaProduct && !skip('productschema') && !skip('product')) {
       fixes.push({
         impact: 'medium',
-        title: 'Your positioning language is not specific enough for AI recommendations',
+        title: 'No Product schema on your key product pages',
+        why: 'When AI systems recommend specific products, they rely on Product schema to identify what is being sold, at what price, and for whom.',
+        deliverableType: 'Product Schema Code',
+        deliverable: r.schemaProduct,
+        isCode: true,
+        where: 'Add to the head section of your main product page. ' + (r.schemaNote || ''),
+        prompt: 'Add the following Product schema to my product page. Here is the code: [paste above]. ' + (r.schemaNote || '')
+      });
+    }
+
+    // Fix 8: Positioning -- skip if already strong
+    if (r.positioning && r.positioning.length && !skip('positioning')) {
+      fixes.push({
+        impact: 'medium',
+        title: 'Your positioning language does not target specific AI search queries',
         why: 'AI systems match businesses to specific queries. Vague positioning means you appear in fewer searches.',
         deliverableType: 'Positioning Statements',
         deliverable: r.positioning.join('\n\n'),
         isCode: false,
-        where: 'Use these across your homepage, product pages, and Google Business Profile. Each targets a specific AI query.',
-        prompt: 'Add these positioning statements to my website. Statement 1 goes in the hero area. Statement 2 goes on the About page. Statement 3 goes in the footer tagline: [paste statements above].'
+        where: 'Use these across your homepage, product pages, and Google Business Profile. Each one targets a specific AI query.',
+        prompt: 'Add these positioning statements to my website. Statement 1 goes in the hero area. Statement 2 goes on the About page. Statement 3 goes in the footer tagline: [paste above].'
       });
     }
 
-    if (r.listingsConsistency) {
+    // Fix 9: Listings consistency -- always include if gaps found
+    if (r.listingsConsistency && !skip('listingsconsistency') && !skip('consistentlistings')) {
       fixes.push({
         impact: 'medium',
-        title: 'Inconsistent business information across public platforms',
+        title: 'Your business information is inconsistent across public platforms',
         why: r.listingsConsistency,
         deliverableType: 'Consistent Business Description',
         deliverable: r.bizDesc || r.entity || '',
         isCode: false,
-        where: 'Use this exact description on your website, Google Business Profile, Yelp, LinkedIn, and every directory.',
-        prompt: 'I need to update my business description to be consistent everywhere. Here is the description to use on all platforms: [paste above]. Which platforms should I prioritize first for maximum AI visibility?'
+        where: 'Use this exact description on your website, Google Business Profile, Yelp, LinkedIn, and every directory you appear in.',
+        prompt: 'I need to update my business description to be consistent everywhere. Here is the description: [paste above]. Which platforms should I prioritize updating first for maximum AI visibility?'
       });
     }
 
-    const domain = d.url || (d.businessQuery || name);
-    const llmsContent = '# ' + name + '\n\n> ' + (r.entity || '').slice(0,200) +
-      '\n\n## Key Pages\n\n- Homepage: ' + (d.url || '') +
-      '\n\n## What We Offer\n\n' + (r.bizDesc || '').slice(0,300);
-    fixes.push({
-      impact: 'low',
-      title: 'No llms.txt file -- AI crawlers lack a clear reading guide',
-      why: 'A simple text file telling AI systems exactly what to read on your site. Takes 10 minutes and signals AI-readiness.',
-      deliverableType: 'llms.txt Content',
-      deliverable: llmsContent,
-      isCode: false,
-      where: 'Create a file called llms.txt at the root of your website so it is accessible at yourdomain.com/llms.txt.',
-      prompt: 'I need to create a file called llms.txt hosted at the root of my website at ' + (d.url || 'mydomain.com') + '/llms.txt. Here is the content: [paste above]. How do I create and host this on my platform?'
-    });
+    // Fix 10: Missing directories
+    if (r.listingsGaps && r.listingsGaps.length && !skip('directorylisting')) {
+      fixes.push({
+        impact: 'medium',
+        title: 'Missing from key directories AI systems read',
+        why: 'AI systems cross-reference multiple directory listings to verify business information. Missing listings reduce recommendation confidence.',
+        deliverableType: 'Directory Listing Description',
+        deliverable: r.bizDesc || '',
+        isCode: false,
+        where: 'Create listings on: ' + r.listingsGaps.join(', ') + '. Use this exact description on all of them for consistency.',
+        prompt: 'I need to create business listings on the following platforms: ' + r.listingsGaps.join(', ') + '. Here is my business description: [paste above]. What information do I need to complete each listing?'
+      });
+    }
+
+    // Fix 11: Competitor gap
+    if (r.competitorGap && !skip('competitorgap')) {
+      fixes.push({
+        impact: 'medium',
+        title: 'Your top competitor has GEO signals you are missing',
+        why: r.competitorGap,
+        deliverableType: 'Competitor Gap Analysis',
+        deliverable: r.queryGapAnalysis || r.competitorGap,
+        isCode: false,
+        where: 'Use this analysis to prioritize which content gaps to close first based on what is already working for competitors in your space.',
+        prompt: 'Based on this competitor gap analysis, help me create content that positions my business as a stronger recommendation than my competitors: [paste analysis above].'
+      });
+    }
+
+    // Fix 12: llms.txt -- skip if already exists
+    if (!skip('llmstxt')) {
+      const llmsContent = r.llmsTxtContent || (
+        '# ' + name + '\n\n> ' + (r.entity || '').slice(0, 200) +
+        '\n\n## Key Pages\n\n- Homepage: ' + (d.url || '') +
+        '\n\n## What We Offer\n\n' + (r.bizDesc || '').slice(0, 300)
+      );
+      fixes.push({
+        impact: 'low',
+        title: 'No llms.txt file — AI crawlers lack a clear reading guide for your site',
+        why: 'A simple text file at your domain root tells AI systems exactly what to read. Takes 10 minutes and signals AI-readiness.',
+        deliverableType: 'llms.txt File Content',
+        deliverable: llmsContent,
+        isCode: false,
+        where: 'Create a file called llms.txt at the root of your website so it is accessible at ' + (d.url || 'yourdomain.com') + '/llms.txt.',
+        prompt: 'I need to create an llms.txt file hosted at ' + (d.url || 'mydomain.com') + '/llms.txt. Here is the content: [paste above]. How do I create and host this file on my specific platform?'
+      });
+    }
 
   } else {
     // Path B fixes
-    if (r.gbpDesc) {
+    if (r.gbpDesc && !skip('gbpdescription') && !skip('googlebusinessprofile')) {
       fixes.push({
         impact: 'high',
         title: 'Your Google Business Profile description is not written for AI systems',
-        why: 'Google Business Profile is the most important GEO signal for businesses without a website.',
+        why: 'Google Business Profile is the most important GEO signal for businesses without a website. AI systems read it to form recommendations.',
         deliverableType: 'Google Business Profile Description',
         deliverable: r.gbpDesc,
         isCode: false,
-        where: 'Go to Google Business Profile, click Edit Profile, then Business Information, then Description.',
+        where: 'Go to Google Business Profile, click Edit Profile, then Business Information, then Description. Paste this text.',
         prompt: 'Review this Google Business Profile description and confirm it is under 750 characters and optimized for AI recommendations: [paste above].'
+      });
+    }
+
+    if (r.gbpCategories) {
+      fixes.push({
+        impact: 'high',
+        title: 'Your Google Business Profile category may not match what AI systems expect',
+        why: 'Category selection is the single strongest signal AI systems use for local business recommendations. Wrong or missing categories mean missed recommendations.',
+        deliverableType: 'Recommended GBP Categories',
+        deliverable: r.gbpCategories,
+        isCode: false,
+        where: 'Go to Google Business Profile, click Edit Profile, then Business Category. Set the primary and secondary categories as recommended.',
+        prompt: 'I need to update my Google Business Profile categories. The recommended categories are: [paste above]. How do I find and set these exact categories in the GBP interface?'
       });
     }
 
@@ -2314,12 +2441,12 @@ function buildFixes(d, r) {
       fixes.push({
         impact: 'high',
         title: 'No Q&A content on your Google Business Profile',
-        why: 'AI systems pull from the Q&A section when answering local search queries.',
+        why: 'AI systems pull from the Q&A section when answering local search queries. Empty Q&A means missed recommendations.',
         deliverableType: 'Google Business Profile Q&A',
         deliverable: faqText,
         isCode: false,
         where: 'In your Google Business Profile Q&A section, post each question yourself then answer using the answers provided.',
-        prompt: 'Format these as professional answers under 1000 characters each for my Google Business Profile Q&A: [paste above].'
+        prompt: 'Format these as professional answers under 1000 characters each for my GBP Q&A section: [paste above].'
       });
     }
 
@@ -2331,8 +2458,8 @@ function buildFixes(d, r) {
         deliverableType: 'Directory Listing Description',
         deliverable: r.directory,
         isCode: false,
-        where: 'Use this exact description on Yelp, Apple Maps, Bing Places, and every directory you appear in.',
-        prompt: 'I need to update my directory listings with consistent information. Here is the description: [paste above]. Which directories should I prioritize for a ' + d.industry + ' business?'
+        where: 'Use this exact description on ' + (r.directoryList ? r.directoryList.join(', ') : 'Yelp, Apple Maps, Bing Places') + ' and every directory you appear in.',
+        prompt: 'I need to update my directory listings with consistent information. Here is the description: [paste above]. What directories should I prioritize for a ' + d.industry + ' business?'
       });
     }
 
@@ -2344,18 +2471,47 @@ function buildFixes(d, r) {
       fixes.push({
         impact: 'high',
         title: 'No website means AI systems cannot fully recommend you',
-        why: 'A single public page dramatically improves your AI visibility. AI systems can crawl it, cite it, and recommend you for specific searches.',
+        why: 'A single public page dramatically improves AI visibility. AI systems can crawl it, cite it, and recommend you for specific searches.',
         deliverableType: 'One-Page Website Copy Package',
         deliverable: pageContent,
         isCode: false,
         where: 'Use this content to build a one-page website on Carrd, Google Sites, or any free website builder.',
-        prompt: 'Build a complete one-page website for my business using this content: [paste above]. Write the full HTML for a clean, professional, mobile-friendly page with basic meta tags for SEO.'
+        prompt: 'Build a complete one-page website for my business using this content: [paste above]. Write the full HTML for a clean, professional, mobile-friendly page with basic meta tags for SEO and the FAQ schema code embedded.'
+      });
+    }
+
+    if (!skip('llmstxt')) {
+      const llmsContent = r.llmsTxtContent || ('# ' + (d.bizName || '') + '\n\n> ' + (d.bizDesc || ''));
+      fixes.push({
+        impact: 'low',
+        title: 'Prepare your llms.txt file for when you build your website',
+        why: 'Have this ready to upload the moment your website is live. It tells AI systems exactly what to read from day one.',
+        deliverableType: 'llms.txt File Content',
+        deliverable: llmsContent,
+        isCode: false,
+        where: 'Save this file. When your website is live upload it to the root domain so it is accessible at yourdomain.com/llms.txt.',
+        prompt: 'I am about to build a website and want to include an llms.txt file from day one. Here is the content: [paste above]. How do I host this file on [my platform]?'
       });
     }
   }
 
+  // Add completeness note card if assessment was limited
+  if (r.completenessNote && allContent.length === 0) {
+    fixes.unshift({
+      impact: 'high',
+      title: 'Limited assessment — no content could be retrieved',
+      why: r.completenessNote,
+      deliverableType: 'Assessment Note',
+      deliverable: r.completenessNote,
+      isCode: false,
+      where: 'For a full assessment ensure your website is publicly accessible and try again. The content below is based on industry analysis only.',
+      prompt: ''
+    });
+  }
+
   return fixes;
 }
+
 
 function buildFixCard(fix, index) {
   const impactClass = fix.impact + '-impact';
